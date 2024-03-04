@@ -1,0 +1,30 @@
+.header-container {
+    padding: 20px;
+    height: 8vh;
+}
+
+hr{
+    margin: 0px;
+    background: linear-gradient(135deg, #FAB2FF 10%, #1904E5 100%);
+    height: 3px;
+}
+
+h1, h2{
+   margin: 0px
+}
+
+.main-container {
+    display: flex;
+    height: 92vh;
+}
+
+.left-container {
+    flex: 1;
+    padding: 20px;
+    border-right: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.right-container {
+    width: 30%;
+    padding: 20px;
+}

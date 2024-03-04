@@ -1,0 +1,14 @@
+<div>
+    <div class="header-container">
+        <h1>Hahn Cargo Simulation</h1>
+    </div>
+    <hr>
+    <div class="main-container" style="display: flex;">
+        <div class="left-container"> 
+            <h2 *ngIf="authEndpoint.authUserSig()">Hello! {{authEndpoint.authUserSig()?.Username}}</h2>
+        </div>
+        <div class="right-container">
+            <h2>Automation Logs</h2>
+        </div>
+    </div>
+</div>

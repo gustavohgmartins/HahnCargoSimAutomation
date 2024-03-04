@@ -1,12 +1,49 @@
+using App.Core.Clients;
+using App.Core.Services;
+using Newtonsoft.Json.Serialization;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+//Appsettings properties
+IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
 
-builder.Services.AddControllers();
+// CORS config
+builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>
+{
+    builder
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .WithOrigins(configuration.GetSection("Cors").Value)
+    .AllowCredentials();
+}));
+
+// Clients config
+builder.Services.AddHttpClient(HahnCargoSimClient.Name, configure =>
+{
+    configure.BaseAddress = new System.Uri(configuration.GetSection("Clients:HahnCargoSimEndpoint").Value);
+});
+
+builder.Services.AddSingleton(x => new HahnCargoSimClient(x.GetRequiredService<IHttpClientFactory>()));
+
+
+// Add services
+
+builder.Services.AddSingleton<AuthService>();
+
+builder.Services.AddControllers()
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.ContractResolver = new DefaultContractResolver();
+                });
 
 var app = builder.Build();
 
+
 // Configure the HTTP request pipeline.
+
+app.UseCors("CorsPolicy");
 
 app.UseHttpsRedirection();
 

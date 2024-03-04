@@ -1,0 +1,75 @@
+body{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: linear-gradient(135deg, #FAB2FF 10%, #1904E5 100%);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  font-family: "Open Sans", sans-serif;
+  color: #333333;
+}
+
+.login{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login button{
+  margin-top: 30px;
+  width: 100%;
+  background-color: #3a44ffce;
+}
+
+.login h1{
+  margin-bottom: 30px;
+}
+
+.main-container{
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.right-container{
+  height: 100%;
+  width: 30%;
+  background-color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.left-container {
+  height: 100%;
+  width: 70%;
+  color: #FFFFFF;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-image: url('../../../../../assets/login_background.jpg') ;
+  overflow: hidden;
+}
+.left-container .overlay {
+  padding: 30px;
+  width: 100%;
+  height: 100%;
+  background: #5961f9ce;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.left-container .overlay h1 {
+  font-size: 10vmax;
+  line-height: 1;
+  font-weight: 900;
+  margin-top: 40px;
+  margin-bottom: 20px;
+}
+
+.left-container .overlay h4 {
+  font-size: 2vmax;
+}
+
+

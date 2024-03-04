@@ -1,0 +1,25 @@
+<div class="main-container">
+    <div class="left-container">
+        <div class="overlay">
+            <h1>Hahn Cargo Simulation</h1>
+            <h4>A trasport solution for life...</h4>
+        </div>
+    </div>
+    <div class="right-container">
+        <form [formGroup]="myForm" (ngSubmit)="onSubmit()">
+            <div class="login" *ngIf="myForm">
+                <h1>Welcome!</h1>
+                <mat-form-field>
+                    <mat-label>Username</mat-label>
+                    <input formControlName="username" matInput type="text">
+                </mat-form-field>
+                <mat-form-field>
+                    <mat-label>Password</mat-label>
+                    <input formControlName="password" matInput type="password">
+                    <mat-error *ngIf="myForm.get('password')!.hasError('loginFailed')">Incorrect password</mat-error>
+                </mat-form-field>
+                <button mat-raised-button color="primary">Sign in</button>
+            </div>
+        </form>
+    </div>
+</div>
