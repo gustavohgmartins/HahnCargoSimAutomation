@@ -7,7 +7,7 @@ import { Router } from '@angular/router';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit{
+export class AppComponent implements OnInit {
   title = 'cargo-sim-automation';
 
   private readonly router = inject(Router);
@@ -15,15 +15,17 @@ export class AppComponent implements OnInit{
 
   ngOnInit(): void {
     this.authEndpoint.verifyLogin().subscribe((response) => {
-      this.authEndpoint.authUserSig.set(response);
-      console.log(this.authEndpoint.authUserSig())
+      let localUser = localStorage.getItem('user');
+
+      if (localUser) {
+        this.authEndpoint.authUserSig.set(JSON.parse(localUser));
+      }
       this.router.navigate(['./admin']);
     },
-    (error) => {
-      console.log(error)
-      this.authEndpoint.authUserSig.set(null);
-      localStorage.setItem("token", '');
-      this.router.navigate(['./login']);
-    })
+      (error) => {
+        console.log(error)
+        this.authEndpoint.authUserSig.set(null);
+        this.router.navigate(['./login']);
+      })
   }
 }

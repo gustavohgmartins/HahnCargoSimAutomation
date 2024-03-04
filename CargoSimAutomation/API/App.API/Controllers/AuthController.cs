@@ -21,7 +21,7 @@ namespace App.API.Controllers
 
         [HttpPost]
         [Route("Login")]
-        public async Task<IActionResult> Login([FromBody] AuthDto auth )
+        public async Task<IActionResult> Login([FromBody] AuthDto auth)
         {
             var response = await authService.Login(auth);
 
@@ -29,7 +29,7 @@ namespace App.API.Controllers
             {
                 return Unauthorized(new { message = "Username or password is incorrect" });
             }
-            return  Ok(response);
+            return Ok(response);
         }
 
         [HttpGet]
@@ -37,13 +37,22 @@ namespace App.API.Controllers
 
         public async Task<IActionResult> VerifyLogin()
         {
-            var response = await authService.VerifyLogin();
+            string token = String.Empty;
+            string authorizationHeader = Request.Headers["Authorization"];
+
+            if (authorizationHeader != null)
+            {
+                token = authorizationHeader.Substring("Bearer ".Length);
+            }
+
+
+            var response = await authService.VerifyLogin(token);
 
             if (response == default)
             {
                 return Unauthorized(new { message = "Unauthorized" });
             }
-            return Ok(authService.Authinfo);
+            return Ok();
         }
     }
 }

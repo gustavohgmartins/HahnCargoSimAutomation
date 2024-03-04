@@ -20,13 +20,13 @@ namespace App.Core.Services
 
         public async Task<AuthDto> Login(AuthDto auth)
         {
-            this.Authinfo = await hahnCargoSimClient.Login(auth);
-
-            return this.Authinfo;
+            return await hahnCargoSimClient.Login(auth);
         }
 
-        public async Task<int> VerifyLogin()
+        public async Task<int> VerifyLogin(string token)
         {
+            hahnCargoSimClient.SetToken(token);
+
             return await hahnCargoSimClient.CoinAmount();
         }
     }

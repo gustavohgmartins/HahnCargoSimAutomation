@@ -12,7 +12,9 @@ import { AuthEndpoint } from 'src/app/domain/auth/auth.endpoint';
 export class LoginPageComponent {
 
   myForm: FormGroup = new FormGroup({});
-  
+  loading: boolean = false;
+
+
   private readonly router = inject(Router);
   private readonly authEndpoint = inject(AuthEndpoint);
 
@@ -27,20 +29,25 @@ export class LoginPageComponent {
     this.myForm.addControl("password", new FormControl(null, [Validators.required]));
   }
 
-  private bodyBuilder(): Auth{
+  private bodyBuilder(): Auth {
     return this.myForm.getRawValue();
   }
 
   onSubmit() {
     if (this.myForm.valid) {
+      this.loading = true;
       this.authEndpoint.login(this.bodyBuilder()).subscribe((response) => {
+        localStorage.setItem('token', response.Token);
+        localStorage.setItem('user', JSON.stringify(response));
         this.authEndpoint.authUserSig.set(response);
+        this.loading = false;
         this.router.navigate(['./admin'])
       },
-      (error) => {
-        this.myForm.get('password')!.setErrors({ loginFailed: true });
-        console.log(error)
-      })
+        (error) => {
+          this.myForm.get('password')!.setErrors({ loginFailed: true });
+          this.loading = false;
+          console.log(error)
+        })
     }
   }
 }

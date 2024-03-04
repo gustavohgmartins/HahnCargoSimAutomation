@@ -18,5 +18,11 @@ export class AdminPageComponent {
 
   ngOnInit() {
   }
+  
+  startSimulation(){
 
+  }
+  stopSimulation(){
+
+  }
 }

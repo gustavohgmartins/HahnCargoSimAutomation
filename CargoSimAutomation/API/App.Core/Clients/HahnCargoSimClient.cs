@@ -23,6 +23,11 @@ namespace App.Core.Clients
             this.httpClient = factory.CreateClient(Name);
         }
 
+        public void SetToken(string token)
+        {
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
         public async Task<AuthDto> Login(AuthDto auth)
         {
             var jsonContent = JsonConvert.SerializeObject(auth);
@@ -40,8 +45,6 @@ namespace App.Core.Clients
             var strResponse = await response.Content.ReadAsStringAsync();
 
             AuthDto responseDto = JsonConvert.DeserializeObject<AuthDto>(strResponse);
-
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", responseDto.Token);
 
             return responseDto;
         }

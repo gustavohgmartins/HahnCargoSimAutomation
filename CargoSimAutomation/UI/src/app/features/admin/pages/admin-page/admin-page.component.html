@@ -6,6 +6,10 @@
     <div class="main-container" style="display: flex;">
         <div class="left-container"> 
             <h2 *ngIf="authEndpoint.authUserSig()">Hello! {{authEndpoint.authUserSig()?.Username}}</h2>
+            <div>
+                <button mat-raised-button color="warn" (click)="startSimulation()">Sign in</button>
+                <button mat-raised-button color="primary" (click)="stopSimulation()">Sign in</button>
+            </div>
         </div>
         <div class="right-container">
             <h2>Automation Logs</h2>

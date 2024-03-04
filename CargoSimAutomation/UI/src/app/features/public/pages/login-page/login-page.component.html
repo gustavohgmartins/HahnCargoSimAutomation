@@ -18,7 +18,8 @@
                     <input formControlName="password" matInput type="password">
                     <mat-error *ngIf="myForm.get('password')!.hasError('loginFailed')">Incorrect password</mat-error>
                 </mat-form-field>
-                <button mat-raised-button color="primary">Sign in</button>
+                <button *ngIf="!loading" mat-raised-button color="primary">Sign in</button>
+                <mat-spinner diameter="30" *ngIf="loading"></mat-spinner>
             </div>
         </form>
     </div>
