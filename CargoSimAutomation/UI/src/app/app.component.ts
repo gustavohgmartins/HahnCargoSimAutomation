@@ -15,9 +15,8 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.authenticating = true;
-    this.authEndpoint.verifyLogin().subscribe((response) => {
+    this.authEndpoint.validateLogin().subscribe((response) => {
       let localUser = localStorage.getItem('user');
-
       if (localUser) {
         this.authEndpoint.authUserSig.set(JSON.parse(localUser));
       }

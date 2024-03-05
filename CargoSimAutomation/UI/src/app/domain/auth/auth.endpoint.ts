@@ -21,7 +21,7 @@ export class AuthEndpoint {
     return this.http.post<Auth>(`${this.endpoint}/Login`, auth);
   }
 
-  verifyLogin(){
-    return this.http.get<Auth>(`${this.endpoint}/VerifyLogin`);
+  validateLogin(){
+    return this.http.get<Auth>(`${this.endpoint}/ValidateLogin`);
   }
 }

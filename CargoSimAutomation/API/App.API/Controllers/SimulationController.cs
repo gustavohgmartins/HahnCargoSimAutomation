@@ -1,4 +1,5 @@
-﻿using App.Domain.Services;
+﻿using App.Core.Services;
+using App.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace App.API.Controllers
@@ -25,7 +26,7 @@ namespace App.API.Controllers
 
             if (!response)
             {
-                return BadRequest(new { message = "Failed to start simulation" });
+                return Unauthorized(new { message = "Failed to start simulation" });
             }
             return Ok();
         }
@@ -39,7 +40,7 @@ namespace App.API.Controllers
 
             if (!response)
             {
-                return BadRequest(new { message = "Failed to stop simulation" });
+                return Unauthorized(new { message = "Failed to stop simulation" });
             }
             return Ok();
         }

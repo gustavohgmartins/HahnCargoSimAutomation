@@ -31,9 +31,9 @@ namespace App.API.Controllers
         }
 
         [HttpGet]
-        [Route("VerifyLogin")]
+        [Route("ValidateLogin")]
 
-        public async Task<IActionResult> VerifyLogin()
+        public async Task<IActionResult> ValidateLogin()
         {
             string token = String.Empty;
             string authorizationHeader = Request.Headers["Authorization"];
@@ -44,9 +44,9 @@ namespace App.API.Controllers
             }
 
 
-            var response = await authService.VerifyLogin(token);
+            var response = await authService.ValidateLogin(token);
 
-            if (response == default)
+            if (!response)
             {
                 return Unauthorized(new { message = "Unauthorized" });
             }

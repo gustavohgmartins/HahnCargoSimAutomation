@@ -26,7 +26,8 @@ namespace App.Core.Services
 
             if (response)
             {
-                consumer.StartConsuming();
+                //keeps trying to start consuming in the background
+                Task.Run(() => consumer.StartConsuming());
             }
 
             return response;

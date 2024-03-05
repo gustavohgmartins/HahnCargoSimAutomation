@@ -42,20 +42,17 @@ namespace App.Core.Clients
             return responseDto;
         }
 
-        public async Task<int> CoinAmount()
+        public async Task<bool> ValidateToken()
         {
+            //simple get to check if the token is still valid
             var response = await httpClient.GetAsync($"/user/CoinAmount");
-
 
             if (!response.IsSuccessStatusCode)
             {
-                return default;
+                return false;
             }
 
-            var strResponse = await response.Content.ReadAsStringAsync();
-
-
-            return JsonConvert.DeserializeObject<int>(strResponse);
+            return true;
         }
 
         public async Task<bool> StartSimulation()

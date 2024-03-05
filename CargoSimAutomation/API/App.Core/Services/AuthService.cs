@@ -8,8 +8,6 @@ namespace App.Core.Services
     {
         private readonly HahnCargoSimClient hahnCargoSimClient;
 
-        private AuthDto authDto;
-
         public AuthService(HahnCargoSimClient hahnCargoSimClient)
         {
             this.hahnCargoSimClient = hahnCargoSimClient;
@@ -20,11 +18,12 @@ namespace App.Core.Services
             return await hahnCargoSimClient.Login(auth);
         }
 
-        public async Task<int> VerifyLogin(string token)
+        //checks if the login token is valid
+        public async Task<bool> ValidateLogin(string token)
         {
             hahnCargoSimClient.SetToken(token);
 
-            return await hahnCargoSimClient.CoinAmount();
+            return await hahnCargoSimClient.ValidateToken(); ;
         }
     }
 }

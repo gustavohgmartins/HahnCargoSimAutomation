@@ -2,33 +2,38 @@
 using System.Threading.Channels;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 public class Consumer
 {
-    private readonly IConnection connection;
-    private readonly IModel channel;
-    private readonly EventingBasicConsumer consumer;
+    private IConnection _connection;
+    private IModel _channel;
+    private EventingBasicConsumer _consumer;
 
     private bool _isConsuming;
-    private string? _consumerTag;
+    private bool _stopRequested;
+    private string _consumerTag;
 
     private readonly string _queueName = "HahnCargoSim_NewOrders";
     private readonly string _HostName = "localhost";
 
     public Consumer()
     {
-        var factory = new ConnectionFactory() 
-        { 
+        CreateConsumer();
+    }
+
+    private void CreateConsumer()
+    {
+        var factory = new ConnectionFactory()
+        {
             HostName = _HostName
         };
 
-        connection = factory.CreateConnection();
-        channel = connection.CreateModel();
+        _connection = factory.CreateConnection();
+        _channel = _connection.CreateModel();
 
-        var teste = 0;
-
-        consumer = new EventingBasicConsumer(channel);
-        consumer.Received += (model, eventArgs) =>
+        _consumer = new EventingBasicConsumer(_channel);
+        _consumer.Received += (model, eventArgs) =>
         {
             var body = eventArgs.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
@@ -36,25 +41,35 @@ public class Consumer
         };
     }
 
-    public void StartConsuming()
+    public async Task StartConsuming()
     {
-        if (_isConsuming)
+        if (_isConsuming || _stopRequested)
         {
+            _stopRequested = false;
             return;
         }
 
-        _consumerTag =  channel.BasicConsume(queue: _queueName, autoAck: true, consumer: consumer);
-        Console.WriteLine("Consumer started");
+        try
+        {
+            _consumerTag = _channel.BasicConsume(queue: _queueName, autoAck: true, consumer: _consumer);
+            _isConsuming = true;
+            Console.WriteLine("Consumer started");
+        }
+        catch (OperationInterruptedException)
+        {
+            Console.WriteLine($"The queue'{_queueName}' does not exist. Unable to start consuming");
+            _connection.Dispose();
+            Task.Delay(3000).Wait();
+            CreateConsumer();
+            await StartConsuming();
+        }
     }
 
     public void StopConsuming()
     {
-        if (!_isConsuming)
-        {
-            return;
-        }
-
-        channel.BasicCancel(_consumerTag);
+        _connection.Dispose();
+        _isConsuming = false;
+        _stopRequested = true;
         Console.WriteLine("Consumer stopped");
     }
 

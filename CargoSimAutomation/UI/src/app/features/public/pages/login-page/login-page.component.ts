@@ -39,10 +39,14 @@ export class LoginPageComponent {
         this.router.navigate(['./admin'])
       },
         (error) => {
-          this.myForm.get('password')!.setErrors({ loginFailed: true });
+          if(error.error.message){
+            this.myForm.get('password')!.setErrors({ loginFailed: true });
+            this.openSnackBar(error.error.message)
+          }
+          else{
+            this.openSnackBar("Unexpected error")
+          }
           this.loading = false;
-          this.openSnackBar(error.error.message)
-          console.log(error)
         })
       }
     }
