@@ -3,6 +3,7 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Auth } from 'src/app/domain/auth/auth.model';
 import { AuthEndpoint } from 'src/app/domain/auth/auth.endpoint';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-login-page',
@@ -17,26 +18,20 @@ export class LoginPageComponent {
 
   private readonly router = inject(Router);
   private readonly authEndpoint = inject(AuthEndpoint);
-
-  constructor() { }
+  private _snackBar = inject(MatSnackBar);
+  
+  constructor() {}
 
   ngOnInit() {
     this.createFormGroup();
   }
 
-  createFormGroup() {
-    this.myForm.addControl("username", new FormControl(null, [Validators.required]));
-    this.myForm.addControl("password", new FormControl(null, [Validators.required]));
-  }
-
-  private bodyBuilder(): Auth {
-    return this.myForm.getRawValue();
-  }
-
+  
   onSubmit() {
     if (this.myForm.valid) {
       this.loading = true;
       this.authEndpoint.login(this.bodyBuilder()).subscribe((response) => {
+        this.openSnackBar("Successfully logged in!")
         localStorage.setItem('token', response.Token);
         localStorage.setItem('user', JSON.stringify(response));
         this.authEndpoint.authUserSig.set(response);
@@ -46,8 +41,24 @@ export class LoginPageComponent {
         (error) => {
           this.myForm.get('password')!.setErrors({ loginFailed: true });
           this.loading = false;
+          this.openSnackBar(error.error.message)
           console.log(error)
         })
+      }
     }
-  }
+    createFormGroup() {
+      this.myForm.addControl("username", new FormControl(null, [Validators.required]));
+      this.myForm.addControl("password", new FormControl(null, [Validators.required]));
+    }
+  
+    
+    openSnackBar(message: string) {
+      this._snackBar.open(message, 'Ok',{
+        duration: 3000
+      });
+    }
+    
+    private bodyBuilder(): Auth {
+      return this.myForm.getRawValue();
+    }
 }

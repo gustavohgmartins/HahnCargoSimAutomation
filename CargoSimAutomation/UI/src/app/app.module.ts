@@ -5,12 +5,14 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HTTP_INTERCEPTORS, HttpClientModule, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { AuthInterceptor } from './domain/auth/auth.interceptor';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @NgModule({
   declarations: [
     AppComponent
   ],
   imports: [
+    MatProgressSpinnerModule,
     HttpClientModule,
     BrowserModule,
     AppRoutingModule,

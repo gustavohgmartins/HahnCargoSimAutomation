@@ -1,14 +1,7 @@
-﻿using App.Core.Services;
-using App.Domain.DTO;
+﻿using App.Domain.DTO;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace App.Core.Clients
 {
@@ -62,7 +55,33 @@ namespace App.Core.Clients
             var strResponse = await response.Content.ReadAsStringAsync();
 
 
-            return JsonConvert.DeserializeObject<int>(strResponse); ;
+            return JsonConvert.DeserializeObject<int>(strResponse);
+        }
+
+        public async Task<bool> StartSimulation()
+        {
+            var response = await httpClient.PostAsync($"/sim/start", null);
+
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> StopSimulation()
+        {
+            var response = await httpClient.PostAsync($"/sim/stop", null);
+
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

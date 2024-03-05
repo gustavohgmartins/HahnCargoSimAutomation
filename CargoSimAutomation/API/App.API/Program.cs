@@ -1,5 +1,6 @@
 using App.Core.Clients;
 using App.Core.Services;
+using App.Domain.Services;
 using Newtonsoft.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,10 +28,14 @@ builder.Services.AddHttpClient(HahnCargoSimClient.Name, configure =>
 
 builder.Services.AddSingleton(x => new HahnCargoSimClient(x.GetRequiredService<IHttpClientFactory>()));
 
+// RabbitMQ - Consumer
+
+builder.Services.AddSingleton(x => new Consumer());
 
 // Add services
 
-builder.Services.AddSingleton<AuthService>();
+builder.Services.AddTransient<IAuthService, AuthService>();
+builder.Services.AddSingleton<ISimulationService, SimulationService>();
 
 builder.Services.AddControllers()
                 .AddNewtonsoftJson(options =>

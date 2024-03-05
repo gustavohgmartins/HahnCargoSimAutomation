@@ -1,1 +1,4 @@
-<router-outlet></router-outlet>
+<router-outlet *ngIf="!authenticating"></router-outlet>
+<div *ngIf="authenticating">
+    <mat-spinner></mat-spinner>
+</div>

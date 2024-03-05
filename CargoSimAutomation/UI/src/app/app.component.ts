@@ -9,23 +9,26 @@ import { Router } from '@angular/router';
 })
 export class AppComponent implements OnInit {
   title = 'cargo-sim-automation';
-
+  authenticating: boolean = false;
   private readonly router = inject(Router);
   private readonly authEndpoint = inject(AuthEndpoint);
 
   ngOnInit(): void {
+    this.authenticating = true;
     this.authEndpoint.verifyLogin().subscribe((response) => {
       let localUser = localStorage.getItem('user');
 
       if (localUser) {
         this.authEndpoint.authUserSig.set(JSON.parse(localUser));
       }
+      this.authenticating = false;
       this.router.navigate(['./admin']);
     },
       (error) => {
         console.log(error)
         this.authEndpoint.authUserSig.set(null);
-        this.router.navigate(['./login']);
+        this.authenticating = false;
+        this.router.navigate(['']);
       })
   }
 }

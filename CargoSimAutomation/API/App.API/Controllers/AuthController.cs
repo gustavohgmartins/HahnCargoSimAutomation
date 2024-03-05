@@ -1,7 +1,5 @@
-﻿using App.Core.Clients;
-using App.Core.Services;
-using App.Domain.DTO;
-using App.Domain.Model;
+﻿using App.Domain.DTO;
+using App.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace App.API.Controllers
@@ -11,9 +9,9 @@ namespace App.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ILogger<AuthController> _logger;
-        private readonly AuthService authService;
+        private readonly IAuthService authService;
 
-        public AuthController(ILogger<AuthController> logger, AuthService authService)
+        public AuthController(ILogger<AuthController> logger, IAuthService authService)
         {
             _logger = logger;
             this.authService = authService;
@@ -27,7 +25,7 @@ namespace App.API.Controllers
 
             if (response == default)
             {
-                return Unauthorized(new { message = "Username or password is incorrect" });
+                return Unauthorized(new { message = "Incorrect password" });
             }
             return Ok(response);
         }

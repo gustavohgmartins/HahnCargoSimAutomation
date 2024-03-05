@@ -1,17 +1,14 @@
 ﻿using App.Core.Clients;
 using App.Domain.DTO;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using App.Domain.Services;
 
 namespace App.Core.Services
 {
-    public class AuthService
+    public class AuthService : IAuthService
     {
         private readonly HahnCargoSimClient hahnCargoSimClient;
-        public AuthDto Authinfo { get; private set; }
+
+        private AuthDto authDto;
 
         public AuthService(HahnCargoSimClient hahnCargoSimClient)
         {
