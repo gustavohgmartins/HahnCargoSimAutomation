@@ -1,5 +1,6 @@
 using App.Core.Clients;
 using App.Core.Services;
+using App.Domain.DTOs;
 using App.Domain.Services;
 using Newtonsoft.Json.Serialization;
 
@@ -21,10 +22,13 @@ builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>
 }));
 
 // Clients config
-builder.Services.AddHttpClient(HahnCargoSimClient.Name, configure =>
-{
-    configure.BaseAddress = new System.Uri(configuration.GetSection("Clients:HahnCargoSimEndpoint").Value);
-});
+
+builder.Services.AddHttpClient();
+
+//builder.Services.AddHttpClient(HahnCargoSimClient.Name, configure =>
+//{
+//    configure.BaseAddress = new System.Uri(configuration.GetSection("Clients:HahnCargoSimEndpoint").Value);
+//});
 
 builder.Services.AddSingleton(x => new HahnCargoSimClient(x.GetRequiredService<IHttpClientFactory>()));
 
@@ -34,8 +38,10 @@ builder.Services.AddSingleton(x => new Consumer());
 
 // Add services
 
+builder.Services.AddTransient<AuthDto>();
 builder.Services.AddTransient<IAuthService, AuthService>();
-builder.Services.AddSingleton<ISimulationService, SimulationService>();
+builder.Services.AddTransient<ISimulationService, SimulationService>();
+builder.Services.AddTransient<IAutomation, Automation>();
 
 builder.Services.AddControllers()
                 .AddNewtonsoftJson(options =>

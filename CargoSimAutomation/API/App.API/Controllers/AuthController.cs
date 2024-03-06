@@ -1,4 +1,4 @@
-﻿using App.Domain.DTO;
+﻿using App.Domain.DTOs;
 using App.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -35,6 +35,17 @@ namespace App.API.Controllers
 
         public async Task<IActionResult> ValidateLogin()
         {
+            var response = await authService.ValidateLogin(GetToken());
+
+            if (!response)
+            {
+                return Unauthorized(new { message = "Unauthorized" });
+            }
+            return Ok();
+        }
+
+        private string GetToken()
+        {
             string token = String.Empty;
             string authorizationHeader = Request.Headers["Authorization"];
 
@@ -43,14 +54,7 @@ namespace App.API.Controllers
                 token = authorizationHeader.Substring("Bearer ".Length);
             }
 
-
-            var response = await authService.ValidateLogin(token);
-
-            if (!response)
-            {
-                return Unauthorized(new { message = "Unauthorized" });
-            }
-            return Ok();
+            return token;
         }
     }
 }

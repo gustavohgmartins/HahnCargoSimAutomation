@@ -1,4 +1,4 @@
-﻿using App.Domain.DTO;
+﻿using App.Domain.DTOs;
 
 namespace App.Domain.Services
 {

@@ -1,4 +1,4 @@
-﻿namespace App.Domain.DTO
+﻿namespace App.Domain.DTOs
 {
     public class AuthDto
     {
