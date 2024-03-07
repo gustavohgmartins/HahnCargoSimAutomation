@@ -168,7 +168,7 @@ namespace App.Core.Clients
             return true;
         }
 
-        public async Task<List<Grid>> GetGrif(string token)
+        public async Task<Grid> GetGrid(string token)
         {
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/grid/Get");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
@@ -182,7 +182,7 @@ namespace App.Core.Clients
 
             var strResponse = await responseMsg.Content.ReadAsStringAsync();
 
-            var response = JsonConvert.DeserializeObject<List<Grid>>(strResponse);
+            var response = JsonConvert.DeserializeObject<Grid>(strResponse);
 
             return response;
         }
