@@ -8,5 +8,6 @@
         public int Capacity { get; set; }
         public int Load { get; set; }
         public List<Order>? LoadedOrders { get; set; }
+        public List<int>? Route { get; set; }
     }
 }

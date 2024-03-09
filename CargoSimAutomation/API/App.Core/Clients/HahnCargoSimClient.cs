@@ -153,10 +153,9 @@ namespace App.Core.Clients
 
         public async Task<bool> AcceptOrder(string token, int orderId)
         {
-            var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/order/Accept");
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/order/Accept?orderId={orderId}");
+
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
-            requestMessage.Properties.Add("orderId", orderId);
-            //requestMessage.Options.Set<int>(new HttpRequestOptionsKey<int>("orderId"), orderId);
 
             var response = await httpClient.SendAsync(requestMessage);
 
@@ -187,11 +186,10 @@ namespace App.Core.Clients
             return response;
         }
 
-        public async Task<int> BuyCargoTransporter(string token, int positionNodeId)
+        public async Task<int> BuyCargoTransporter(string token, int? positionNodeId)
         {
-            var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/CargoTransporter/Buy");
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/CargoTransporter/Buy?positionNodeId={positionNodeId}");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
-            requestMessage.Properties.Add("positionNodeId", positionNodeId);
 
             var responseMsg = await httpClient.SendAsync(requestMessage);
 
@@ -209,7 +207,7 @@ namespace App.Core.Clients
 
         public async Task<CargoTransporter?> GetCargoTransporter(string token, int transporterId)
         {
-            var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/CargoTransporter/Get");
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/CargoTransporter/Get?transporterId={transporterId}");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
             requestMessage.Properties.Add("transporterId", transporterId);
 
@@ -229,10 +227,8 @@ namespace App.Core.Clients
 
         public async Task<bool> MoveCargoTransporter(string token, int transporterId, int targetNodeId)
         {
-            var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/CargoTransporter/Move");
+            var requestMessage = new HttpRequestMessage(HttpMethod.Put, $"{_baseAddress}/CargoTransporter/Move?transporterId={transporterId}&targetNodeId={targetNodeId}");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
-            requestMessage.Properties.Add("transporterId", transporterId);
-            requestMessage.Properties.Add("targetNodeId", targetNodeId);
 
             var response = await httpClient.SendAsync(requestMessage);
 

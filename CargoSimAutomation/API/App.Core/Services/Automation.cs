@@ -1,10 +1,14 @@
 ﻿using App.Core.Clients;
 using App.Domain.DTOs;
 using App.Domain.Model;
+using App.Domain.Models;
 using App.Domain.Services;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Routing;
 using QuickGraph;
 using QuickGraph.Algorithms.ShortestPath;
 using System.Linq;
+using System.Xml.Linq;
 
 
 namespace App.Core.Services
@@ -14,8 +18,14 @@ namespace App.Core.Services
         private readonly HahnCargoSimClient hahnCargoSimClient;
         private readonly AuthDto authUser;
         private string _token;
-
         private bool _isRunning;
+        private Grid _grid;
+        private Graph _graph;
+        private List<Order> _availableOrders = new List<Order>();
+        private List<Order> _acceptedOrders = new List<Order>();
+        private List<CargoTransporter> _transporters = new List<CargoTransporter>();
+        private List<int> _transportersIds = new List<int>();
+        int _coins;
 
         public Automation(HahnCargoSimClient hahnCargoSimClient, AuthDto authUser)
         {
@@ -27,10 +37,10 @@ namespace App.Core.Services
         {
             _token = token;
 
-            ////if (_isRunning)
-            ////{
-            ////    return;
-            ////}
+            if (_isRunning)
+            {
+                return;
+            }
 
             _isRunning = true;
             Task.Run(ExecuteAsync);
@@ -43,186 +53,322 @@ namespace App.Core.Services
 
         private async Task ExecuteAsync()
         {
-            var grid = await hahnCargoSimClient.GetGrid(_token);
+            _grid = await hahnCargoSimClient.GetGrid(_token);
+            _graph = new Graph(_grid.Nodes, _grid.Edges, _grid.Connections);
 
-            var start = 15;
-            var end = 1;
+            Console.WriteLine($"\nHello, {authUser.Username}!");
+            Console.WriteLine($"\nWaiting for available orders...");
 
-            ////while (_isRunning)
-            ////{
-            var coins = await hahnCargoSimClient.GetCoinAmount(_token);
-            Console.WriteLine($"Hello, {authUser.Username}! You have {coins} coins!");
-
-            //////////////////////
-
-            
-            ////UndirectedGraph<Node, Edge<Node>> graph = new UndirectedGraph<Node, Edge<Node>>();
-            ////graph.AddVertexRange(grid.Nodes.ToArray());
-           
-            ////grid.Connections.Select(c => graph.AddEdge(new Edge<Node>(grid.Nodes.First(n => n.Id == c.FirstNodeId), grid.Nodes.First(n => n.Id == c.SecondNodeId))));
-
-            ////////Func<Edge<Node>, int> edgeCost = edge => grid.Edges.First(e => e.Id == (grid.Connections.Where(c => (c.FirstNodeId == edge.Source.Id || c.FirstNodeId == edge.Target.Id) && (c.SecondNodeId == edge.Source.Id || c.SecondNodeId == edge.Target.Id)).First().EdgeId)).Cost;
-            ////Func<Edge<Node>, int> edgeCost = edge => 1;
-            
-            ////var dijkstra = new UndirectedDijkstraShortestPathAlgorithm<Node, Edge<Node>>(graph, edge => edgeCost(edge));
-
-            ////dijkstra.SetRootVertex(graph.Vertices.First(v => v.Id == start));
-            
-            ////dijkstra.Compute();
-
-            ////double distance;
-
-            ////var targetVertex = graph.Vertices.First(v => v.Id == end);
-
-            ////bool found = dijkstra.TryGetDistance(targetVertex, out distance);
-
-            ////if (found)
-            ////{
-            ////    Console.WriteLine($"Distância de {graph.Vertices.First(v => v.Id == start).Name} para {targetVertex.Name}: {distance}");
-            ////}
-            ////else
-            ////{
-            ////    Console.WriteLine($"Não foi possível alcançar {targetVertex} a partir de A.");
-            ////}
-
-            //////////////////
-
-            var teste = new Graph(grid.Nodes, grid.Edges, grid.Connections);
-
-            var previousNodes = teste.FindShortestPath(start, end);
-            var path = teste.ReconstructPath(start, end, previousNodes);
-
-            if (path != null)
+            while (!_availableOrders.Any())
             {
-                Console.WriteLine("Caminho mais curto encontrado:");
-                foreach (var nodeId in path)
+                _availableOrders = await hahnCargoSimClient.GetAvailableOrders(_token);
+                await Task.Delay(1000);
+            }
+            Console.WriteLine($"\nStarted");
+
+            while (_isRunning)
+            {
+                _coins = await hahnCargoSimClient.GetCoinAmount(_token);
+
+                //Gets all available orders 
+                _availableOrders = await hahnCargoSimClient.GetAvailableOrders(_token);
+
+                //Filters the orders that are on the grid
+                _availableOrders = _availableOrders.Where(o =>
+                                                    _grid.Nodes.Any(n => n.Id == o.TargetNodeId)
+                                                    &&
+                                                    _grid.Nodes.Any(n => n.Id == o.OriginNodeId)
+                                                    )
+                                                   .ToList();
+
+                _acceptedOrders = await hahnCargoSimClient.GetAcceptedOrders(_token);
+                if (!_availableOrders.Any() && !_acceptedOrders.Any())
                 {
-                    var node = grid.Nodes.Find(n => n.Id == nodeId);
-                    Console.WriteLine($"-> {node.Id}");
+                    Console.WriteLine($"\nWaiting for available orders...");
                 }
-            }
-            else
-            {
-                Console.WriteLine("Não há caminho entre os nós especificados.");
-                Console.WriteLine($"{start} -> {end}");
-            }
 
-            await Task.Delay(100000);
-        }
-    ////}
-    }
-
-    public class Graph
-    {
-        private readonly List<Node> nodes;
-        private readonly List<Edge> edges;
-        private readonly List<Connection> connections;
-
-        public Graph(List<Node> nodes, List<Edge> edges, List<Connection> connections)
-        {
-            this.nodes = nodes;
-            this.edges = edges;
-            this.connections = connections;
-        }
-
-        public Dictionary<int, int> FindShortestPath(int startNodeId, int endNodeId)
-        {
-            var graph = new Dictionary<int, Dictionary<int, int>>();
-
-            foreach (var connection in connections)
-            {
-                var edge = edges.Find(e => e.Id == connection.EdgeId);
-                if (edge == null)
+                //Gets the transporters
+                _transporters = [];
+                if (_transportersIds.Any())
                 {
-                    continue;
-                }
-                if (!graph.ContainsKey(connection.FirstNodeId))
-                    graph[connection.FirstNodeId] = new Dictionary<int, int>();
-                graph[connection.FirstNodeId][connection.SecondNodeId] = edge.Cost;
-
-                if (!graph.ContainsKey(connection.SecondNodeId))
-                    graph[connection.SecondNodeId] = new Dictionary<int, int>();
-                graph[connection.SecondNodeId][connection.FirstNodeId] = edge.Cost;
-            }
-
-            var shortestDistances = new Dictionary<int, int>();
-            var previousNodes = new Dictionary<int, int>();
-            var unvisitedNodes = new HashSet<int>();
-
-            foreach (var node in nodes)
-            {
-                shortestDistances[node.Id] = int.MaxValue;
-                previousNodes[node.Id] = -1;
-                unvisitedNodes.Add(node.Id);
-            }
-
-            shortestDistances[startNodeId] = 0;
-
-            while (unvisitedNodes.Count > 0)
-            {
-                int currentNodeId = GetClosestNode(unvisitedNodes, shortestDistances);
-
-                if (currentNodeId == -2)
-                    break;
-
-                unvisitedNodes.Remove(currentNodeId);
-
-                if (currentNodeId == endNodeId)
-                    break;
-
-                if (!graph.ContainsKey(currentNodeId))
-                    continue;
-
-                foreach (var neighbor in graph[currentNodeId])
-                {
-                    int tentativeDistance = shortestDistances[currentNodeId] + neighbor.Value;
-                    if (tentativeDistance < shortestDistances[neighbor.Key])
+                    foreach (var id in _transportersIds)
                     {
-                        shortestDistances[neighbor.Key] = tentativeDistance;
-                        previousNodes[neighbor.Key] = currentNodeId;
+                        var transporter = await hahnCargoSimClient.GetCargoTransporter(_token, id);
+                        if (transporter is not null)
+                        {
+                            transporter.Route = [];
+
+                            if (!transporter.InTransit)
+                            {
+                                transporter = await BuildRoute(transporter);
+                            }
+
+                            _transporters.Add(transporter);
+                        }
                     }
                 }
-            }
+                ////Buys the first transporter at the first order start location
+                else if (_availableOrders.Any())
+                {
+                    ////Starts accepting the quicker route from the first 100 options
+                    var orderToAccept = _availableOrders
+                        .Select(o => new
+                        {
+                            RouteDto = _graph.GetRoute(o.OriginNodeId, o.TargetNodeId),
+                            Order = o
+                        })
+                        .OrderBy(r => r.RouteDto.Time)
+                        .First();
 
-            return previousNodes;
+                    ////var time = TimeSpan.MaxValue;
+                    ////var orderToAccept = 0;
+                    ////foreach (var order in _availableOrders.Take(100))
+                    ////{
+                    ////    var route = _graph.GetRoute(order.OriginNodeId, order.TargetNodeId);      WHEN EVERY DETAIL FOR PERFORMANCE ENHANCING COUNTS
+                    ////    if (route.Time < time)
+                    ////    {
+                    ////        time = route.Time;
+                    ////        orderToAccept = order.Id;
+
+                    ////    }
+                    ////}
+
+                    var orderAccepted = await hahnCargoSimClient.AcceptOrder(_token, orderToAccept.Order.Id);
+
+                    if (orderAccepted)
+                    {
+                        Console.WriteLine($"\nOrder {orderToAccept.Order.Id} accepted from {GetNodeName(orderToAccept.Order.OriginNodeId)} to {GetNodeName(orderToAccept.Order.TargetNodeId)}. Estimated delivery time {orderToAccept.RouteDto.Time}");
+
+                        _transportersIds = [await hahnCargoSimClient.BuyCargoTransporter(_token, orderToAccept.Order.OriginNodeId)];
+
+                        Console.WriteLine($"\nTransporter {_transportersIds.First()} bought at {GetNodeName(orderToAccept.Order.OriginNodeId)}");
+                        Console.WriteLine($"\nTransporter {_transportersIds.First()} loading order {orderToAccept.Order.Id}");
+                    }
+                }
+
+
+                ////Moves transporters
+                foreach (var transporter in _transporters.Where(t => t.Route.Any() && !t.InTransit))
+                {
+                    var targetNode = transporter.Route[0];
+                    var moveTransporter = await hahnCargoSimClient.MoveCargoTransporter(_token, transporter.Id, targetNode);
+                    if (moveTransporter)
+                    {
+                        Console.WriteLine($"\nMoving transporter {transporter.Id} from {GetNodeName(transporter.PositionNodeId)} to {GetNodeName(targetNode)}");
+                        transporter.Route.RemoveAt(0);
+
+                        if (!transporter.Route.Any())
+                        {
+                            Console.WriteLine($"\nTransporter {transporter.Id} Delivering the following orders: {string.Join(", ", transporter.LoadedOrders.Where(o => o.TargetNodeId == targetNode).Select(o => o.Id))}");
+                        }
+                    }
+                }
+
+                await Task.Delay(2000);
+            }
+            Console.WriteLine("Finished");
         }
 
-        private int GetClosestNode(HashSet<int> unvisitedNodes, Dictionary<int, int> shortestDistances)
+        //Build the best route for the transporter, at the moment
+        private async Task<CargoTransporter> BuildRoute(CargoTransporter transporter)
         {
-            int closestNodeId = -1;
-            int shortestDistance = int.MaxValue;
-            foreach (var nodeId in unvisitedNodes)
+            if (transporter.LoadedOrders.Any())
             {
-                if (shortestDistances[nodeId] < shortestDistance)
+                var closestOrder = transporter.LoadedOrders
+                    .Select(o => new
+                    {
+                        RouteDto = _graph.GetRoute(transporter.PositionNodeId, o.TargetNodeId),
+                        Order = o
+                    })
+                    .OrderBy(r => r.RouteDto.Time)
+                    .First();
+                transporter.Route = closestOrder.RouteDto.Route;
+
+                Console.WriteLine($"\nRoute updated for transporter {transporter.Id} current route: {string.Join(", ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to delivery order {closestOrder.Order.Id} | Estimated time for delivery: {closestOrder.RouteDto.Time}");
+            }
+            else if (_acceptedOrders.Any())
+            {
+                var closestOrder = _acceptedOrders
+                    .Select(o => new
+                    {
+                        RouteDto = _graph.GetRoute(transporter.PositionNodeId, o.OriginNodeId),
+                        Order = o
+                    })
+                    .OrderBy(r => r.RouteDto.Time)
+                    .First();
+
+                transporter.Route = closestOrder.RouteDto.Route;
+                if (closestOrder.RouteDto.Time != TimeSpan.Zero)
                 {
-                    closestNodeId = nodeId;
-                    shortestDistance = shortestDistances[nodeId];
+                    Console.WriteLine($"\nRoute updated for transporter {transporter.Id} current route: {string.Join(", ", transporter.Route)} | Currently on route to pick up order {closestOrder.Order.Id} | Estimated time for pick up: {closestOrder.RouteDto.Time}");
+                }
+
+            }
+            ////Accepts the next order and sets the transporter route to pick it up
+            else
+            {
+                ////List<RouteDto> availableOrdersRoutes = new List<RouteDto>();
+
+                ////foreach (var order in _availableOrders)
+                ////{
+                ////    availableOrdersRoutes.Add(_graph.GetRoute(transporter.PositionNodeId, order.OriginNodeId));     WHEN EVERY DETAIL FOR PERFORMANCE ENHANCING COUNTS
+                ////}
+
+                ////var route = availableOrdersRoutes.OrderBy(t => t.Time).First();
+
+                var closestOrder = _availableOrders
+                    .Select(o => new
+                    {
+                        RouteDto = _graph.GetRoute(transporter.PositionNodeId, o.OriginNodeId),
+                        Order = o
+                    })
+                    .OrderBy(r => r.RouteDto.Time)
+                    .First();
+
+                var orderAccepted = await hahnCargoSimClient.AcceptOrder(_token, closestOrder.Order.Id);
+
+                if (orderAccepted)
+                {
+                    transporter.Route = closestOrder.RouteDto.Route;
+
+                    Console.WriteLine($"\nRoute updated for transporter {transporter.Id} current route: {string.Join(", ", transporter.Route)} | Currently on route to pick up order {closestOrder.Order.Id}  Estimated time for delivery: {closestOrder.RouteDto.Time}");
                 }
             }
 
-            if (closestNodeId == -1 && unvisitedNodes.Count > 0)
-            {
-                return -2;
-            }
-
-            return closestNodeId;
+            return transporter;
         }
 
-        public List<int> ReconstructPath(int startNodeId, int endNodeId, Dictionary<int, int> previousNodes)
+        private string GetNodeName(int id)
         {
-            var path = new List<int>();
-            int currentNodeId = endNodeId;
-            while (currentNodeId != startNodeId)
-            {
-                if (!previousNodes.ContainsKey(currentNodeId))
-                    return null;
+            return _grid.Nodes.FirstOrDefault(n => n.Id == id).Name;
+        }
 
-                path.Add(currentNodeId);
-                currentNodeId = previousNodes[currentNodeId];
+        private class Graph
+        {
+            private readonly List<Node> nodes;
+            private readonly List<Edge> edges;
+            private readonly List<Connection> connections;
+
+            public Graph(List<Node> nodes, List<Edge> edges, List<Connection> connections)
+            {
+                this.nodes = nodes;
+                this.edges = edges;
+                this.connections = connections;
             }
-            path.Add(startNodeId);
-            path.Reverse();
-            return path;
+
+            public RouteDto GetRoute(int startNodeId, int endNodeId)
+            {
+                var response = FindShortestPathNodes(startNodeId, endNodeId);
+
+                var previousNodes = response.PreviousNodes;
+                var TotalCost = response.TotalCost;
+
+                var path = new List<int>();
+                int currentNodeId = endNodeId;
+                while (currentNodeId != startNodeId)
+                {
+                    if (!previousNodes.ContainsKey(currentNodeId))
+                        return null;
+
+                    path.Add(currentNodeId);
+                    currentNodeId = previousNodes[currentNodeId];
+                }
+                path.Add(startNodeId);
+                path.Reverse();
+                path.RemoveAt(0);
+
+                return new RouteDto
+                {
+                    Route = path,
+                    Time = TotalCost
+                };
+            }
+
+            private int GetClosestNode(HashSet<int> unvisitedNodes, Dictionary<int, TimeSpan> shortestDistances)
+            {
+                int closestNodeId = -1;
+                TimeSpan shortestDistance = TimeSpan.MaxValue;
+                foreach (var nodeId in unvisitedNodes)
+                {
+                    if (shortestDistances[nodeId] < shortestDistance)
+                    {
+                        closestNodeId = nodeId;
+                        shortestDistance = shortestDistances[nodeId];
+                    }
+                }
+
+                if (closestNodeId == -1 && unvisitedNodes.Count > 0)
+                {
+                    return -2;
+                }
+
+                return closestNodeId;
+            }
+
+            private ShortestPathDto FindShortestPathNodes(int startNodeId, int endNodeId)
+            {
+                var graph = new Dictionary<int, Dictionary<int, TimeSpan>>();
+
+                foreach (var connection in connections)
+                {
+                    var edge = edges.Find(e => e.Id == connection.EdgeId);
+                    if (edge == null)
+                    {
+                        continue;
+                    }
+                    if (!graph.ContainsKey(connection.FirstNodeId))
+                        graph[connection.FirstNodeId] = new Dictionary<int, TimeSpan>();
+                    graph[connection.FirstNodeId][connection.SecondNodeId] = edge.Time;
+
+                    if (!graph.ContainsKey(connection.SecondNodeId))
+                        graph[connection.SecondNodeId] = new Dictionary<int, TimeSpan>();
+                    graph[connection.SecondNodeId][connection.FirstNodeId] = edge.Time;
+                }
+
+                var shortestDistances = new Dictionary<int, TimeSpan>();
+                var previousNodes = new Dictionary<int, int>();
+                var unvisitedNodes = new HashSet<int>();
+
+                foreach (var node in nodes)
+                {
+                    shortestDistances[node.Id] = TimeSpan.MaxValue;
+                    previousNodes[node.Id] = -1;
+                    unvisitedNodes.Add(node.Id);
+                }
+
+                shortestDistances[startNodeId] = TimeSpan.Zero;
+
+                while (unvisitedNodes.Count > 0)
+                {
+                    int currentNodeId = GetClosestNode(unvisitedNodes, shortestDistances);
+
+                    if (currentNodeId == -2)
+                        break;
+
+                    unvisitedNodes.Remove(currentNodeId);
+
+                    if (currentNodeId == endNodeId)
+                        break;
+
+                    if (!graph.ContainsKey(currentNodeId))
+                        continue;
+
+                    foreach (var neighbor in graph[currentNodeId])
+                    {
+                        TimeSpan tentativeDistance = shortestDistances[currentNodeId] + neighbor.Value;
+                        if (tentativeDistance < shortestDistances[neighbor.Key])
+                        {
+                            shortestDistances[neighbor.Key] = tentativeDistance;
+                            previousNodes[neighbor.Key] = currentNodeId;
+                        }
+                    }
+                }
+                return new ShortestPathDto
+                {
+                    PreviousNodes = previousNodes,
+                    TotalCost = shortestDistances[endNodeId]
+                };
+            }
         }
     }
 }
