@@ -14,8 +14,8 @@ h1, h2{
 }
 
 .main-container {
-    display: flex;
     height: 92vh;
+    width: 100vw;
 }
 
 .left-container {
@@ -25,6 +25,6 @@ h1, h2{
 }
 
 .right-container {
-    width: 30%;
+    width: 25%;
     padding: 20px;
 }

@@ -167,6 +167,22 @@ namespace App.Core.Clients
             return true;
         }
 
+        public async Task<bool> CreateOrder(string token)
+        {
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/order/Create");
+
+            requestMessage.Headers.Add("Authorization", $"Bearer {token}");
+
+            var response = await httpClient.SendAsync(requestMessage);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         public async Task<Grid> GetGrid(string token)
         {
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/grid/Get");

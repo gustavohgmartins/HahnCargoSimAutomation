@@ -9,12 +9,10 @@ namespace App.API.Controllers
     [Route("[controller]")]
     public class SimulationController : ControllerBase
     {
-        private readonly ILogger<SimulationController> _logger;
         private readonly ISimulationService simulationService;
 
-        public SimulationController(ILogger<SimulationController> logger, ISimulationService simulationService)
+        public SimulationController(ISimulationService simulationService)
         {
-            _logger = logger;
             this.simulationService = simulationService;
         }
 
@@ -24,7 +22,7 @@ namespace App.API.Controllers
         public async Task<IActionResult> Start()
         {
             var token = GetToken(Request);
-            var username = GetUsername(Request);
+            var username = Request.Headers["Username"];
 
             var response = await simulationService.Start(token, username);
 
@@ -64,11 +62,5 @@ namespace App.API.Controllers
 
             return token;
         }
-
-        private string GetUsername(HttpRequest request)
-        {
-            return request.Headers["Username"];
-        }
-
     }
 }

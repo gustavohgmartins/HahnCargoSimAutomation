@@ -3,16 +3,24 @@
         <h1>Hahn Cargo Simulation</h1>
     </div>
     <hr>
-    <div class="main-container" style="display: flex;">
-        <div class="left-container">
-            <h2 *ngIf="authEndpoint.authUserSig()">Hello! {{authEndpoint.authUserSig()?.Username}}</h2>
-            <div>
-                <button mat-raised-button color="primary" (click)="startSimulation()">Start</button>
-                <button mat-raised-button color="warn" (click)="stopSimulation()">Stop</button>
+    <div class="main-container">
+        <div class="top-container" style="display: flex;">
+            <div class="left-container">
+                <h2 *ngIf="authEndpoint.authUserSig()">Hello! {{authEndpoint.authUserSig()?.Username}}</h2>
+                <div>
+                    <button mat-raised-button color="primary" (click)="startSimulation()">Start</button>
+                    <button mat-raised-button color="warn" (click)="stopSimulation()">Stop</button>
+                    <button mat-raised-button color="warn" (click)="generateOrders()">Generate Orders</button>
+                </div>
+            </div>
+            <div class="right-container">
+
             </div>
         </div>
-        <div class="right-container">
-            <h2>Automation Logs</h2>
+        <div class="bottom-container" style="display: flex;flex-wrap: wrap;width: 100%;border-top: 1px solid rgba(0, 0, 0, 0.1);">
+            <div *ngFor="let entry of logsData | keyvalue" style="width: 50%; height: 250px;padding:10px 5px;box-sizing: border-box;">
+                <app-log-box [entity]="entry.key" [logs]="entry.value"></app-log-box>
+            </div>
         </div>
     </div>
 </div>

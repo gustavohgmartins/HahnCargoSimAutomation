@@ -1,6 +1,5 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
-import { Observable } from 'rxjs';
 import { Auth } from 'src/app/domain/auth/auth.model';
 import { Environment } from 'src/environments/environment';
 

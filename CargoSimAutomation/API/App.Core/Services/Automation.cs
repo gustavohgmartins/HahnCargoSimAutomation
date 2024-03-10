@@ -1,16 +1,10 @@
 ﻿using App.Core.Clients;
+using App.Core.Hubs;
 using App.Domain.DTOs;
 using App.Domain.Model;
 using App.Domain.Models;
 using App.Domain.Services;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Routing;
-using QuickGraph;
-using QuickGraph.Algorithms.ShortestPath;
-using System.Collections.Generic;
-using System.Linq;
-using System.Xml.Linq;
-
+using Microsoft.Extensions.Configuration;
 
 namespace App.Core.Services
 {
@@ -18,8 +12,12 @@ namespace App.Core.Services
     {
         private readonly HahnCargoSimClient hahnCargoSimClient;
         private readonly AuthDto authUser;
+        private readonly AutomationHub hub;
+        private readonly IConfiguration configuration;
         private string _token;
         private bool _isRunning;
+        private int _maxTransporters;
+        private int _coins;
         private Grid _grid;
         private Graph _graph;
         private List<Order> _availableOrders = new List<Order>();
@@ -27,13 +25,15 @@ namespace App.Core.Services
         private List<CargoTransporter> _transporters = new List<CargoTransporter>();
         private List<int> _transportersIds = new List<int>();
         private Dictionary<int, Order> _transporterAcceptedOrder = new Dictionary<int, Order>();
-        private int _coins;
-        private List<double> _teste = new List<double>();
 
-        public Automation(HahnCargoSimClient hahnCargoSimClient, AuthDto authUser)
+
+        public Automation(HahnCargoSimClient hahnCargoSimClient, AuthDto authUser, IConfiguration configuration, AutomationHub hub)
         {
             this.hahnCargoSimClient = hahnCargoSimClient;
             this.authUser = authUser;
+            this.configuration = configuration;
+            this.hub = hub;
+            _maxTransporters = configuration.GetValue<int>("MaxTransporters");
         }
 
         public async Task Start(string token)
@@ -59,9 +59,8 @@ namespace App.Core.Services
             _grid = await hahnCargoSimClient.GetGrid(_token);
             _graph = new Graph(_grid.Nodes, _grid.Edges, _grid.Connections);
 
-            Console.WriteLine($"\nHello, {authUser.Username}!");
-
-            Console.WriteLine($"\nSimulation started");
+            await hub.SendLog("Simulation", "Started");
+            await hub.SendLog("Simulation", $"Hello, {authUser.Username}!");
 
             while (_isRunning)
             {
@@ -71,7 +70,7 @@ namespace App.Core.Services
 
                 if (!_availableOrders.Any() && !_acceptedOrders.Any())
                 {
-                    Console.WriteLine($"\nWaiting for available orders...");
+                    await hub.SendLog("Simulation", "Waiting for available orders...");
 
                     while (!_availableOrders.Any())
                     {
@@ -81,15 +80,15 @@ namespace App.Core.Services
                 }
 
                 await GetTransporters();
-
                 await BuyTransporter();
-
                 await MoveTransporters();
 
                 await Task.Delay(2000);
             }
 
-            Console.WriteLine("Finished");
+
+            await hub.SendLog("Simulation", "Finished");
+
         }
 
         private async Task GetTransporters()
@@ -132,11 +131,12 @@ namespace App.Core.Services
 
         private async Task<CargoTransporter> BuildRoute(CargoTransporter transporter)
         {
-            ////var currentNodeAcceptedOrders = await AcceptCurrentNodeOrders(transporter);//Checks if there are any acceptable orders in the transporter current node
+            //var currentNodeAcceptedOrders = await AcceptCurrentNodeOrders(transporter);//Accepts any acceptable orders in the transporter current node
 
             if (transporter.LoadedOrders.Any())
             {
                 var bestOrder = transporter.LoadedOrders
+                    //.Concat(currentNodeAcceptedOrders)
                     .Select(o => new
                     {
                         Route = _graph.GetRoute(transporter.PositionNodeId, o.TargetNodeId),
@@ -147,59 +147,71 @@ namespace App.Core.Services
 
                 transporter.Route = bestOrder.Route.Route;
 
-                Console.WriteLine($"\nRoute updated for transporter {transporter.Id} current route: {string.Join(", ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to delivery order {bestOrder.Order.Id} | Estimated time for delivery: {bestOrder.Route.Time}");
+                await hub.SendLog($"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to delivery order {bestOrder.Order.Id} | Estimated time for delivery: {bestOrder.Route.Time}");
             }
             else if (transporter.AcceptedOrder is not null)
             {
                 var route = _graph.GetRoute(transporter.PositionNodeId, transporter.AcceptedOrder.OriginNodeId);
+
                 transporter.Route = route.Route;
 
                 if (route.Time != TimeSpan.Zero)
                 {
-                    Console.WriteLine($"\nRoute updated for transporter {transporter.Id} current route: {string.Join(", ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to pick up order {transporter.AcceptedOrder.Id} | Estimated time for pick up: {route.Time}");
+                    await hub.SendLog($"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to pick up order {transporter.AcceptedOrder.Id} | Estimated time for pick up: {route.Time}");
                 }
             }
-            ////Accepts the next order and sets the transporter route to pick it up
+            ////Accepts the next order and sets the transporter on route to pick it up
             else
             {
                 //if (!currentNodeAcceptedOrders.Any())
                 //{
-                var bestOrder = _availableOrders
-                .Select(o => new
-                {
-                    OrderRoute = _graph.GetRoute(o.OriginNodeId, o.TargetNodeId),
-                    PickUpRoute = _graph.GetRoute(transporter.PositionNodeId, o.OriginNodeId),
-                    Order = o
-                })
-                .OrderByDescending(r => BestRouteIndex(r.OrderRoute.Time + r.PickUpRoute.Time, r.OrderRoute.Cost + r.PickUpRoute.Cost, r.Order.Value))
-                .First();
+                    var bestOrder = _availableOrders
+                        .Select(o => new
+                        {
+                            OrderRoute = _graph.GetRoute(o.OriginNodeId, o.TargetNodeId),
+                            PickUpRoute = _graph.GetRoute(transporter.PositionNodeId, o.OriginNodeId),
+                            Order = o
+                        })
+                        .OrderByDescending(r => BestRouteIndex(r.OrderRoute.Time + r.PickUpRoute.Time, r.OrderRoute.Cost + r.PickUpRoute.Cost, r.Order.Value))
+                        .First();
 
-                var orderAccepted = await hahnCargoSimClient.AcceptOrder(_token, bestOrder.Order.Id);
+                    var orderAccepted = await hahnCargoSimClient.AcceptOrder(_token, bestOrder.Order.Id);
 
-                if (orderAccepted)
-                {
-                    Console.WriteLine($"\nOrder {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}");
+                    if (orderAccepted)
+                    {
+                        await hub.SendLog($"Transporter {transporter.Id}", $"Order {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}");
 
-                    ////Set the accepted order to the current transporter
-                    _transporterAcceptedOrder[transporter.Id] = bestOrder.Order;
+                        ////Set the accepted order to the current transporter
+                        _transporterAcceptedOrder[transporter.Id] = bestOrder.Order;
 
-                    transporter.AcceptedOrder = bestOrder.Order;
+                        transporter.AcceptedOrder = bestOrder.Order;
 
-                    transporter.Route = bestOrder.PickUpRoute.Route;
+                        transporter.Route = bestOrder.PickUpRoute.Route;
 
-                    Console.WriteLine($"\nRoute updated for transporter {transporter.Id} current route: {string.Join(", ", transporter.Route)} | Currently on route to pick up order {bestOrder.Order.Id}  Estimated time for pick up: {bestOrder.PickUpRoute.Time}");
+                        if (bestOrder.PickUpRoute.Time != TimeSpan.Zero)
+                        {
+                            await hub.SendLog($"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to pick up order {bestOrder.Order.Id}  Estimated time for pick up: {bestOrder.PickUpRoute.Time}");
+                        }
+                        else
+                        {
+                            await hub.SendLog($"Transporter {transporter.Id}", $"Picking up order {bestOrder.Order.Id}");
+                        }
+                    //}
                 }
-                //}
             }
 
             return transporter;
         }
-
         private async Task BuyTransporter()
         {
-            ////if (!_transportersIds.Any() || _coins > (1000 * (1 + 0.1 * _transporters.Count)))
+            if (_maxTransporters > 0 && _transporters.Count() >= _maxTransporters)
+            {
+                return;
+            }
 
-            if (!_transportersIds.Any())
+            if (!_transportersIds.Any() || _coins > (1000 * (1 + 0.1 * _transporters.Count)))
+
+            ////if (!_transportersIds.Any())
             {
                 var bestOrder = _availableOrders
                     .Select(o => new
@@ -214,16 +226,16 @@ namespace App.Core.Services
 
                 if (orderAccepted)
                 {
-                    Console.WriteLine($"\nOrder {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}. Estimated delivery time {bestOrder.OrderRoute.Time}");
-
                     var transporterId = await hahnCargoSimClient.BuyCargoTransporter(_token, bestOrder.Order.OriginNodeId);
+
 
                     _transportersIds.Add(transporterId);
 
                     _transporterAcceptedOrder[transporterId] = bestOrder.Order;
 
-                    Console.WriteLine($"\nTransporter {transporterId} bought at {GetNodeName(bestOrder.Order.OriginNodeId)}");
-                    Console.WriteLine($"\nTransporter {transporterId} loading order {bestOrder.Order.Id}");
+                    await hub.SendLog($"Simulation", $"Transporter {transporterId} bought at {GetNodeName(bestOrder.Order.OriginNodeId)}");
+                    await hub.SendLog($"Transporter {transporterId}", $"Order {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}. Estimated delivery time {bestOrder.OrderRoute.Time}");
+                    await hub.SendLog($"Transporter {transporterId}", $"Loading order {bestOrder.Order.Id}");
                 }
             }
         }
@@ -235,10 +247,13 @@ namespace App.Core.Services
             foreach (var transporter in transportersToMove)
             {
                 var targetNode = transporter.Route[0];
+
                 var moveTransporter = await hahnCargoSimClient.MoveCargoTransporter(_token, transporter.Id, targetNode);
+
                 if (moveTransporter)
                 {
-                    Console.WriteLine($"\nMoving transporter {transporter.Id} from {GetNodeName(transporter.PositionNodeId)} to {GetNodeName(targetNode)}");
+                    await hub.SendLog($"Transporter {transporter.Id}", $"Moving from {GetNodeName(transporter.PositionNodeId)} to {GetNodeName(targetNode)}");
+
                     transporter.Route.RemoveAt(0);
 
                     if (!transporter.Route.Any())
@@ -246,13 +261,12 @@ namespace App.Core.Services
                         _transporterAcceptedOrder.Remove(transporter.Id);
                         if (transporter.LoadedOrders.Any(o => o.TargetNodeId == targetNode))
                         {
-                            Console.WriteLine($"\nTransporter {transporter.Id} delivering the following orders: {string.Join(", ", transporter.LoadedOrders.Where(o => o.TargetNodeId == targetNode))}");
+                            await hub.SendLog($"Transporter {transporter.Id}", $"Delivering the following orders: {string.Join(", ", transporter.LoadedOrders.Where(o => o.TargetNodeId == targetNode).Select(o => o.Id).ToList())}");
                         }
                         else
                         {
-                            Console.WriteLine($"\nTransporter {transporter.Id} picking up the following order: {transporter.AcceptedOrder.Id}");
+                            await hub.SendLog($"Transporter {transporter.Id}", $"Picking up order {transporter.AcceptedOrder.Id}");
                         }
-
                     }
                 }
             }
@@ -275,6 +289,7 @@ namespace App.Core.Services
             }
 
             List<Order> acceptedOrders = new List<Order>();
+
             var currentNodeAvailableOrders = _availableOrders
                     .Where(o => o.OriginNodeId == transporter.PositionNodeId)
                     .Select(o => new
@@ -284,19 +299,22 @@ namespace App.Core.Services
                     })
                     .OrderByDescending(r => BestRouteIndex(r.OrderRoute.Time, r.OrderRoute.Cost, r.Order.Value));
 
+            var currentLoad = transporter.Load + (transporter.AcceptedOrder?.Load ?? 0);
+
             foreach (var order in currentNodeAvailableOrders)
             {
-                if (transporter.Load + transporter.AcceptedOrder?.Load + order.Order.Load <= transporter.Capacity)
+                if (currentLoad + order.Order.Load <= transporter.Capacity)
                 {
                     var orderAccepted = await hahnCargoSimClient.AcceptOrder(_token, order.Order.Id);
 
                     if (orderAccepted)
                     {
-                        transporter.Load += order.Order.Load;
+                        currentLoad += order.Order.Load;
 
                         acceptedOrders.Add(order.Order);
 
-                        Console.WriteLine($"\nOrder {order.Order.Id} accepted from {GetNodeName(order.Order.OriginNodeId)} to {GetNodeName(order.Order.TargetNodeId)}");
+                        await hub.SendLog($"Transporter {transporter.Id}", $"Order {order.Order.Id} accepted midway at {GetNodeName(transporter.PositionNodeId)}, from {GetNodeName(order.Order.OriginNodeId)} to {GetNodeName(order.Order.TargetNodeId)}");
+                        await hub.SendLog($"Transporter {transporter.Id}", $"Order {order.Order.Id} loaded");
                     }
                 }
             }
@@ -327,8 +345,8 @@ namespace App.Core.Services
 
         private string GetNodeName(int id)
         {
-            return _grid.Nodes.FirstOrDefault(n => n.Id == id).Id.ToString();
-            ////return _grid.Nodes.FirstOrDefault(n => n.Id == id).Name;
+            //return _grid.Nodes.FirstOrDefault(n => n.Id == id).Id.ToString();
+            return _grid.Nodes.FirstOrDefault(n => n.Id == id).Name;
         }
 
         private class Graph
@@ -358,7 +376,9 @@ namespace App.Core.Services
                 while (currentNodeId != startNodeId)
                 {
                     if (!previousNodes.ContainsKey(currentNodeId))
+                    {
                         return null;
+                    }
 
                     path.Add(currentNodeId);
                     currentNodeId = previousNodes[currentNodeId];
@@ -376,69 +396,6 @@ namespace App.Core.Services
             }
             private BestPathDto FindShortestPathNodes(int startNodeId, int endNodeId)
             {
-                //    var graph = new Dictionary<int, Dictionary<int, TimeSpan>>();
-
-                //    foreach (var connection in connections)
-                //    {
-                //        var edge = edges.Find(e => e.Id == connection.EdgeId);
-                //        if (edge == null)
-                //        {
-                //            continue;
-                //        }
-                //        if (!graph.ContainsKey(connection.FirstNodeId))
-                //            graph[connection.FirstNodeId] = new Dictionary<int, TimeSpan>();
-                //        graph[connection.FirstNodeId][connection.SecondNodeId] = edge.Time;
-
-                //        if (!graph.ContainsKey(connection.SecondNodeId))
-                //            graph[connection.SecondNodeId] = new Dictionary<int, TimeSpan>();
-                //        graph[connection.SecondNodeId][connection.FirstNodeId] = edge.Time;
-                //    }
-
-                //    var shortestDistances = new Dictionary<int, TimeSpan>();
-                //    var previousNodes = new Dictionary<int, int>();
-                //    var unvisitedNodes = new HashSet<int>();
-
-                //    foreach (var node in nodes)
-                //    {
-                //        shortestDistances[node.Id] = TimeSpan.MaxValue;
-                //        previousNodes[node.Id] = -1;
-                //        unvisitedNodes.Add(node.Id);
-                //    }
-
-                //    shortestDistances[startNodeId] = TimeSpan.Zero;
-
-                //    while (unvisitedNodes.Count > 0)
-                //    {
-                //        int currentNodeId = GetClosestNode(unvisitedNodes, shortestDistances);
-
-                //        if (currentNodeId == -2)
-                //            break;
-
-                //        unvisitedNodes.Remove(currentNodeId);
-
-                //        if (currentNodeId == endNodeId)
-                //            break;
-
-                //        if (!graph.ContainsKey(currentNodeId))
-                //            continue;
-
-                //        foreach (var neighbor in graph[currentNodeId])
-                //        {
-                //            TimeSpan tentativeDistance = shortestDistances[currentNodeId] + neighbor.Value;
-                //            if (tentativeDistance < shortestDistances[neighbor.Key])
-                //            {
-                //                shortestDistances[neighbor.Key] = tentativeDistance;
-                //                previousNodes[neighbor.Key] = currentNodeId;
-                //            }
-                //        }
-                //    }
-
-                //    return new BestPathDto
-                //    {
-                //        PreviousNodes = previousNodes,
-                //        Time = shortestDistances[endNodeId],
-                //    };
-
                 var graph = new Dictionary<int, Dictionary<int, BestPathParamsDto>>();
 
                 foreach (var connection in connections)
@@ -449,11 +406,17 @@ namespace App.Core.Services
                         continue;
                     }
                     if (!graph.ContainsKey(connection.FirstNodeId))
+                    {
                         graph[connection.FirstNodeId] = new Dictionary<int, BestPathParamsDto>();
+                    }
+
                     graph[connection.FirstNodeId][connection.SecondNodeId] = new BestPathParamsDto { Time = edge.Time, Cost = edge.Cost };
 
                     if (!graph.ContainsKey(connection.SecondNodeId))
+                    {
                         graph[connection.SecondNodeId] = new Dictionary<int, BestPathParamsDto>();
+                    }
+
                     graph[connection.SecondNodeId][connection.FirstNodeId] = new BestPathParamsDto { Time = edge.Time, Cost = edge.Cost };
                 }
 

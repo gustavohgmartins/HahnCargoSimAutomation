@@ -13,8 +13,6 @@ export class SimulationEndpoint {
     return `${this.environment.apiEndpoint}/simulation`
   }
 
-  authUserSig = signal<Auth | null | undefined>(undefined);
-  
   constructor(private readonly http: HttpClient, private environment: Environment) { }
 
   startSimulation(){

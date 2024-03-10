@@ -8,12 +8,10 @@ namespace App.API.Controllers
     [Route("[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly ILogger<AuthController> _logger;
         private readonly IAuthService authService;
 
-        public AuthController(ILogger<AuthController> logger, IAuthService authService)
+        public AuthController(IAuthService authService)
         {
-            _logger = logger;
             this.authService = authService;
         }
 

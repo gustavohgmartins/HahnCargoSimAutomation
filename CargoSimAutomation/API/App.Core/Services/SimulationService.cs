@@ -1,6 +1,8 @@
 ﻿using App.Core.Clients;
+using App.Core.Hubs;
 using App.Domain.DTOs;
 using App.Domain.Services;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 
 
@@ -10,13 +12,16 @@ namespace App.Core.Services
     {
         private readonly HahnCargoSimClient hahnCargoSimClient;
         private readonly Consumer consumer;
-
+        private readonly AutomationHub hub;
+        private readonly IConfiguration configuration;
         private bool _isRunning;
 
-        public SimulationService(HahnCargoSimClient hahnCargoSimClient, Consumer consumer)
+        public SimulationService(HahnCargoSimClient hahnCargoSimClient, Consumer consumer, IConfiguration configuration, AutomationHub hub)
         {
             this.hahnCargoSimClient = hahnCargoSimClient;
             this.consumer = consumer;
+            this.hub = hub;
+            this.configuration = configuration.GetSection("SimulationConfig");
         }
 
         public async Task<bool> Start(string token, string username)
@@ -52,7 +57,7 @@ namespace App.Core.Services
 
             if (userAutomation == default)
             {
-                userAutomation = new Automation(hahnCargoSimClient, authUser);
+                userAutomation = new Automation(hahnCargoSimClient, authUser, configuration, hub);
 
                 AutomationDictionary.AddUserAutomation(authUser.Username, userAutomation);
             }
