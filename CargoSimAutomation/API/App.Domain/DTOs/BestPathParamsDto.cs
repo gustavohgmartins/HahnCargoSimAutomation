@@ -1,8 +1,7 @@
 ﻿namespace App.Domain.DTOs
 {
-    public class RouteDto
+    public class BestPathParamsDto
     {
-        public List<int> Route { get; set; }
         public TimeSpan Time { get; set; }
         public int Cost { get; set; }
     }

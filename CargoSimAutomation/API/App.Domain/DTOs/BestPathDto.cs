@@ -1,8 +1,9 @@
 ﻿namespace App.Domain.DTOs
 {
-    public class ShortestPathDto
+    public class BestPathDto
     {
         public Dictionary<int, int> PreviousNodes { get; set; }
-        public TimeSpan TotalCost { get; set; }
+        
+        public BestPathParamsDto Params { get; set; }
     }
 }
