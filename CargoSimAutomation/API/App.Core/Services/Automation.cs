@@ -250,7 +250,7 @@ namespace App.Core.Services
                         }
                         else
                         {
-                            Console.WriteLine($"\nTransporter {transporter.Id} picking up the following order: {transporter.AcceptedOrder.I}");
+                            Console.WriteLine($"\nTransporter {transporter.Id} picking up the following order: {transporter.AcceptedOrder.Id}");
                         }
 
                     }
