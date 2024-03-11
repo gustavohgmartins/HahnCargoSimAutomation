@@ -1,20 +1,21 @@
 /* Estilos da barra de rolagem */
 mat-card-content::-webkit-scrollbar {
-    width: 10px; /* Largura da barra de rolagem */
+    width: 10px;
   }
   
   mat-card-content::-webkit-scrollbar-track {
-    background: #f1f1f1; /* Cor de fundo da área de rolagem */
+    background: #f1f1f1;
   }
   
   mat-card-content::-webkit-scrollbar-thumb {
-    background: #888; /* Cor da alça da barra de rolagem */
-    border-radius: 5px; /* Borda arredondada */
+    background: #888;
+    border-radius: 5px;
   }
   
   mat-card-content::-webkit-scrollbar-thumb:hover {
-    background: #555; /* Cor da alça da barra de rolagem ao passar o mouse */
+    background: #555;
   }
+
   mat-card-content{
     height: 100%;
     overflow-y: auto;

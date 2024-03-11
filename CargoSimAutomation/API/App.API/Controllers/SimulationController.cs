@@ -31,7 +31,7 @@ namespace App.API.Controllers
                 return Unauthorized(new { message = "Failed to start simulation" });
             }
 
-            return Ok(new { message = "Failed to start simulation" });
+            return Ok();
         }
 
         [HttpPost]
@@ -44,10 +44,10 @@ namespace App.API.Controllers
 
             if (!response)
             {
-                return Unauthorized(new { message = "Failed to start simulation" });
+                return Unauthorized(new { message = "Failed to stop simulation" });
             }
 
-            return Ok(new { message = "Failed to start simulation" });
+            return Ok();
         }
 
         private string GetToken(HttpRequest request)

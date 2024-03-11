@@ -25,6 +25,8 @@ export class AppComponent implements OnInit {
     },
       (error) => {
         console.log(error)
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         this.authEndpoint.authUserSig.set(null);
         this.authenticating = false;
         this.router.navigate(['']);

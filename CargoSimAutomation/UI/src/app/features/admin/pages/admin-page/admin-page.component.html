@@ -1,26 +1,29 @@
-<div>
+<body>
     <div class="header-container">
         <h1>Hahn Cargo Simulation</h1>
+        <button mat-icon-button aria-label="Logout" (click)="logout()">
+            <mat-icon>logout</mat-icon>
+        </button>
     </div>
     <hr>
     <div class="main-container">
-        <div class="top-container" style="display: flex;">
+        <div class="top-container">
             <div class="left-container">
-                <h2 *ngIf="authEndpoint.authUserSig()">Hello! {{authEndpoint.authUserSig()?.Username}}</h2>
+                <h2 *ngIf="username">Hello, {{username}}!</h2>
                 <div>
                     <button mat-raised-button color="primary" (click)="startSimulation()">Start</button>
                     <button mat-raised-button color="warn" (click)="stopSimulation()">Stop</button>
                     <button mat-raised-button color="warn" (click)="generateOrders()">Generate Orders</button>
                 </div>
             </div>
-            <div class="right-container">
-
+            <div class="right-container" *ngFor="let entry of simData | keyvalue">
+                <app-log-box [entity]="entry.key" [logs]="entry.value"></app-log-box>
             </div>
         </div>
-        <div class="bottom-container" style="display: flex;flex-wrap: wrap;width: 100%;border-top: 1px solid rgba(0, 0, 0, 0.1);">
-            <div *ngFor="let entry of logsData | keyvalue" style="width: 50%; height: 250px;padding:10px 5px;box-sizing: border-box;">
+        <div class="bottom-container">
+            <div class="log-box" *ngFor="let entry of logsData | keyvalue">
                 <app-log-box [entity]="entry.key" [logs]="entry.value"></app-log-box>
             </div>
         </div>
     </div>
-</div>
+</body>

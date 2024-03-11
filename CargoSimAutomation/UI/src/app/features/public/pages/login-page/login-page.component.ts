@@ -31,15 +31,15 @@ export class LoginPageComponent {
     if (this.myForm.valid) {
       this.loading = true;
       this.authEndpoint.login(this.bodyBuilder()).subscribe((response) => {
-        this.openSnackBar("Successfully logged in!")
+        this.authEndpoint.authUserSig.set(response);
         localStorage.setItem('token', response.Token);
         localStorage.setItem('user', JSON.stringify(response));
-        this.authEndpoint.authUserSig.set(response);
-        this.loading = false;
         this.router.navigate(['./admin'])
+        this.loading = false;
+        this.openSnackBar("Successfully logged in!")
       },
         (error) => {
-          if(error.error.message){
+          if(error.error?.message){
             this.myForm.get('password')!.setErrors({ loginFailed: true });
             this.openSnackBar(error.error.message)
           }

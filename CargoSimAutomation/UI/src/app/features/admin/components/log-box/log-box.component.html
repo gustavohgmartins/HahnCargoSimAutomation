@@ -4,7 +4,7 @@
             <h2>{{entity}}</h2>
         </mat-card-title>
     </mat-card-header>
-    <mat-card-content>
+    <mat-card-content #scrollBox>
         <ul>
             <li *ngFor="let log of logs">
                 {{ log }}

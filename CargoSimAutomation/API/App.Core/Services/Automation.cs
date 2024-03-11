@@ -4,7 +4,9 @@ using App.Domain.DTOs;
 using App.Domain.Model;
 using App.Domain.Models;
 using App.Domain.Services;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 
 namespace App.Core.Services
 {
@@ -25,6 +27,7 @@ namespace App.Core.Services
         private List<CargoTransporter> _transporters = new List<CargoTransporter>();
         private List<int> _transportersIds = new List<int>();
         private Dictionary<int, Order> _transporterAcceptedOrder = new Dictionary<int, Order>();
+        private Dictionary<string,List<string>> _logs = new Dictionary<string, List<string>>();
 
 
         public Automation(HahnCargoSimClient hahnCargoSimClient, AuthDto authUser, IConfiguration configuration, AutomationHub hub)
@@ -59,8 +62,8 @@ namespace App.Core.Services
             _grid = await hahnCargoSimClient.GetGrid(_token);
             _graph = new Graph(_grid.Nodes, _grid.Edges, _grid.Connections);
 
-            await hub.SendLog("Simulation", "Started");
-            await hub.SendLog("Simulation", $"Hello, {authUser.Username}!");
+            await hub.SendLog(authUser.Username, "Simulation", $"Hello, {authUser.Username}!");
+            await hub.SendLog(authUser.Username, "Simulation", "Simulation started");
 
             while (_isRunning)
             {
@@ -70,7 +73,7 @@ namespace App.Core.Services
 
                 if (!_availableOrders.Any() && !_acceptedOrders.Any())
                 {
-                    await hub.SendLog("Simulation", "Waiting for available orders...");
+                    await hub.SendLog(authUser.Username, "Simulation", "Waiting for available orders...");
 
                     while (!_availableOrders.Any())
                     {
@@ -87,7 +90,7 @@ namespace App.Core.Services
             }
 
 
-            await hub.SendLog("Simulation", "Finished");
+            await hub.SendLog(authUser.Username, "Simulation", "Finished");
 
         }
 
@@ -131,12 +134,9 @@ namespace App.Core.Services
 
         private async Task<CargoTransporter> BuildRoute(CargoTransporter transporter)
         {
-            //var currentNodeAcceptedOrders = await AcceptCurrentNodeOrders(transporter);//Accepts any acceptable orders in the transporter current node
-
             if (transporter.LoadedOrders.Any())
             {
                 var bestOrder = transporter.LoadedOrders
-                    //.Concat(currentNodeAcceptedOrders)
                     .Select(o => new
                     {
                         Route = _graph.GetRoute(transporter.PositionNodeId, o.TargetNodeId),
@@ -147,7 +147,7 @@ namespace App.Core.Services
 
                 transporter.Route = bestOrder.Route.Route;
 
-                await hub.SendLog($"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to delivery order {bestOrder.Order.Id} | Estimated time for delivery: {bestOrder.Route.Time}");
+                await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to delivery order {bestOrder.Order.Id} | Estimated time for delivery: {bestOrder.Route.Time}");
             }
             else if (transporter.AcceptedOrder is not null)
             {
@@ -157,51 +157,49 @@ namespace App.Core.Services
 
                 if (route.Time != TimeSpan.Zero)
                 {
-                    await hub.SendLog($"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to pick up order {transporter.AcceptedOrder.Id} | Estimated time for pick up: {route.Time}");
+                    await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to pick up order {transporter.AcceptedOrder.Id} | Estimated time for pick up: {route.Time}");
                 }
             }
             ////Accepts the next order and sets the transporter on route to pick it up
             else
             {
-                //if (!currentNodeAcceptedOrders.Any())
-                //{
-                    var bestOrder = _availableOrders
-                        .Select(o => new
-                        {
-                            OrderRoute = _graph.GetRoute(o.OriginNodeId, o.TargetNodeId),
-                            PickUpRoute = _graph.GetRoute(transporter.PositionNodeId, o.OriginNodeId),
-                            Order = o
-                        })
-                        .OrderByDescending(r => BestRouteIndex(r.OrderRoute.Time + r.PickUpRoute.Time, r.OrderRoute.Cost + r.PickUpRoute.Cost, r.Order.Value))
-                        .First();
-
-                    var orderAccepted = await hahnCargoSimClient.AcceptOrder(_token, bestOrder.Order.Id);
-
-                    if (orderAccepted)
+                var bestOrder = _availableOrders
+                    .Select(o => new
                     {
-                        await hub.SendLog($"Transporter {transporter.Id}", $"Order {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}");
+                        OrderRoute = _graph.GetRoute(o.OriginNodeId, o.TargetNodeId),
+                        PickUpRoute = _graph.GetRoute(transporter.PositionNodeId, o.OriginNodeId),
+                        Order = o
+                    })
+                    .OrderByDescending(r => BestRouteIndex(r.OrderRoute.Time + r.PickUpRoute.Time, r.OrderRoute.Cost + r.PickUpRoute.Cost, r.Order.Value))
+                    .First();
 
-                        ////Set the accepted order to the current transporter
-                        _transporterAcceptedOrder[transporter.Id] = bestOrder.Order;
+                var orderAccepted = await hahnCargoSimClient.AcceptOrder(_token, bestOrder.Order.Id);
 
-                        transporter.AcceptedOrder = bestOrder.Order;
+                if (orderAccepted)
+                {
+                    await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Order {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}");
 
-                        transporter.Route = bestOrder.PickUpRoute.Route;
+                    ////Set the accepted order to the current transporter
+                    _transporterAcceptedOrder[transporter.Id] = bestOrder.Order;
 
-                        if (bestOrder.PickUpRoute.Time != TimeSpan.Zero)
-                        {
-                            await hub.SendLog($"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to pick up order {bestOrder.Order.Id}  Estimated time for pick up: {bestOrder.PickUpRoute.Time}");
-                        }
-                        else
-                        {
-                            await hub.SendLog($"Transporter {transporter.Id}", $"Picking up order {bestOrder.Order.Id}");
-                        }
-                    //}
+                    transporter.AcceptedOrder = bestOrder.Order;
+
+                    transporter.Route = bestOrder.PickUpRoute.Route;
+
+                    if (bestOrder.PickUpRoute.Time != TimeSpan.Zero)
+                    {
+                        await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Route updated. Current route: {string.Join(" -> ", transporter.Route.Select(r => GetNodeName(r)).ToList())} | Currently on route to pick up order {bestOrder.Order.Id}  Estimated time for pick up: {bestOrder.PickUpRoute.Time}");
+                    }
+                    else
+                    {
+                        await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Picking up order {bestOrder.Order.Id}");
+                    }
                 }
             }
 
             return transporter;
         }
+
         private async Task BuyTransporter()
         {
             if (_maxTransporters > 0 && _transporters.Count() >= _maxTransporters)
@@ -233,9 +231,9 @@ namespace App.Core.Services
 
                     _transporterAcceptedOrder[transporterId] = bestOrder.Order;
 
-                    await hub.SendLog($"Simulation", $"Transporter {transporterId} bought at {GetNodeName(bestOrder.Order.OriginNodeId)}");
-                    await hub.SendLog($"Transporter {transporterId}", $"Order {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}. Estimated delivery time {bestOrder.OrderRoute.Time}");
-                    await hub.SendLog($"Transporter {transporterId}", $"Loading order {bestOrder.Order.Id}");
+                    await hub.SendLog(authUser.Username, $"Simulation", $"Transporter {transporterId} bought at {GetNodeName(bestOrder.Order.OriginNodeId)}");
+                    await hub.SendLog(authUser.Username, $"Transporter {transporterId}", $"Order {bestOrder.Order.Id} accepted from {GetNodeName(bestOrder.Order.OriginNodeId)} to {GetNodeName(bestOrder.Order.TargetNodeId)}. Estimated delivery time {bestOrder.OrderRoute.Time}");
+                    await hub.SendLog(authUser.Username, $"Transporter {transporterId}", $"Loading order {bestOrder.Order.Id}");
                 }
             }
         }
@@ -252,20 +250,22 @@ namespace App.Core.Services
 
                 if (moveTransporter)
                 {
-                    await hub.SendLog($"Transporter {transporter.Id}", $"Moving from {GetNodeName(transporter.PositionNodeId)} to {GetNodeName(targetNode)}");
+                    await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Moving from {GetNodeName(transporter.PositionNodeId)} to {GetNodeName(targetNode)}");
 
                     transporter.Route.RemoveAt(0);
+
+                    await AcceptNodeOrders(transporter, targetNode);//Accepts any acceptable order in the target node, so it can load it as he gets there
 
                     if (!transporter.Route.Any())
                     {
                         _transporterAcceptedOrder.Remove(transporter.Id);
                         if (transporter.LoadedOrders.Any(o => o.TargetNodeId == targetNode))
                         {
-                            await hub.SendLog($"Transporter {transporter.Id}", $"Delivering the following orders: {string.Join(", ", transporter.LoadedOrders.Where(o => o.TargetNodeId == targetNode).Select(o => o.Id).ToList())}");
+                            await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Delivering the following orders: {string.Join(", ", transporter.LoadedOrders.Where(o => o.TargetNodeId == targetNode).Select(o => o.Id).ToList())}");
                         }
                         else
                         {
-                            await hub.SendLog($"Transporter {transporter.Id}", $"Picking up order {transporter.AcceptedOrder.Id}");
+                            await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Picking up order {transporter.AcceptedOrder.Id}");
                         }
                     }
                 }
@@ -281,17 +281,17 @@ namespace App.Core.Services
 
             return deliveryDateTime <= DateTime.UtcNow;
         }
-        private async Task<List<Order>> AcceptCurrentNodeOrders(CargoTransporter transporter)
+        private async Task AcceptNodeOrders(CargoTransporter transporter, int nodeId)
         {
             if (transporter.LoadedOrders.Any(o => OrderAboutToExpire(o)) || OrderAboutToExpire(transporter.AcceptedOrder))
             {
-                return default;
+                return;
             }
 
             List<Order> acceptedOrders = new List<Order>();
 
-            var currentNodeAvailableOrders = _availableOrders
-                    .Where(o => o.OriginNodeId == transporter.PositionNodeId)
+            var nodeAvailableOrders = _availableOrders
+                    .Where(o => o.OriginNodeId == nodeId)
                     .Select(o => new
                     {
                         OrderRoute = _graph.GetRoute(o.OriginNodeId, o.TargetNodeId),
@@ -301,7 +301,7 @@ namespace App.Core.Services
 
             var currentLoad = transporter.Load + (transporter.AcceptedOrder?.Load ?? 0);
 
-            foreach (var order in currentNodeAvailableOrders)
+            foreach (var order in nodeAvailableOrders)
             {
                 if (currentLoad + order.Order.Load <= transporter.Capacity)
                 {
@@ -313,13 +313,11 @@ namespace App.Core.Services
 
                         acceptedOrders.Add(order.Order);
 
-                        await hub.SendLog($"Transporter {transporter.Id}", $"Order {order.Order.Id} accepted midway at {GetNodeName(transporter.PositionNodeId)}, from {GetNodeName(order.Order.OriginNodeId)} to {GetNodeName(order.Order.TargetNodeId)}");
-                        await hub.SendLog($"Transporter {transporter.Id}", $"Order {order.Order.Id} loaded");
+                        await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Order {order.Order.Id} accepted midway at {GetNodeName(nodeId)}, from {GetNodeName(order.Order.OriginNodeId)} to {GetNodeName(order.Order.TargetNodeId)}");
+                        await hub.SendLog(authUser.Username, $"Transporter {transporter.Id}", $"Loading order {order.Order.Id}");
                     }
                 }
             }
-
-            return acceptedOrders;
         }
 
         private async Task GetOrders()
