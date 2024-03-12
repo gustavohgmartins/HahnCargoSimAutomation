@@ -1,28 +1,50 @@
 <body>
     <div class="header-container">
         <h1>Hahn Cargo Simulation</h1>
-        <button mat-icon-button aria-label="Logout" (click)="logout()">
+        <button mat-icon-button aria-label="Logout" routerLink="/login">
             <mat-icon>logout</mat-icon>
         </button>
     </div>
     <hr>
     <div class="main-container">
         <div class="top-container">
-            <div class="left-container">
-                <h2 *ngIf="username">Hello, {{username}}!</h2>
-                <div>
-                    <button mat-raised-button color="primary" (click)="startSimulation()">Start</button>
-                    <button mat-raised-button color="warn" (click)="stopSimulation()">Stop</button>
-                    <button mat-raised-button color="warn" (click)="generateOrders()">Generate Orders</button>
+            <div class="actions">
+                <h2>Hello, {{_username}}!</h2>
+                <div class="buttons">
+                    <button *ngIf="!_isRunning" mat-raised-button color="primary" (click)="startSimulation()">
+                        <mat-icon>play_arrow</mat-icon>
+                        Start Simulation
+                    </button>
+                    <button *ngIf="_isRunning" mat-raised-button color="warn" (click)="stopSimulation()">
+                        <mat-icon>stop</mat-icon>
+                        Stop Simulation
+                    </button>
+                    <button *ngIf="_isRunning" mat-raised-button color="basic" (click)="generateOrders()">
+                        <mat-icon>edit_note</mat-icon>
+                        Generate Orders</button>
+                    <button mat-raised-button color="basic" (click)="clearLogs()">
+                        <mat-icon>delete</mat-icon>
+                        Clear logs
+                    </button>
                 </div>
             </div>
-            <div class="right-container" *ngFor="let entry of simData | keyvalue">
-                <app-log-box [entity]="entry.key" [logs]="entry.value"></app-log-box>
+            <div class="info">
+                <div class="status">
+                    <h2>Simulation&nbsp;</h2>
+                    <h2>{{_isRunning ? "Running" : "Stopped"}}</h2>
+                    <div class="status-marker" [ngStyle]="{'background-color': _isRunning  ? 'green' : 'red'}">
+                    </div>
+                </div>
+                <h2>Coins: <span [ngStyle]="{'color': _coins < 1000 ? 'orange' : 'green'}">{{_coins}}</span></h2>
+                <h2>Transporters: {{_transporters}}</h2>
+            </div>
+            <div class="right-container" *ngFor="let entry of _simData | keyvalue">
+                <app-log-box [entity]="entry.key" [logs]="entry.value" [isRunning]="_isRunning"></app-log-box>
             </div>
         </div>
         <div class="bottom-container">
-            <div class="log-box" *ngFor="let entry of logsData | keyvalue">
-                <app-log-box [entity]="entry.key" [logs]="entry.value"></app-log-box>
+            <div class="log-box" *ngFor="let entry of _logsData | keyvalue">
+                <app-log-box [entity]="entry.key" [logs]="entry.value" [isRunning]="_isRunning"></app-log-box>
             </div>
         </div>
     </div>

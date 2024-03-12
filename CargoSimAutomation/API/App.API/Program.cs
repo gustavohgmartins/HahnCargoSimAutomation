@@ -28,7 +28,6 @@ builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>
 // Clients config
 
 builder.Services.AddHttpClient();
-
 builder.Services.AddSingleton(x => new HahnCargoSimClient(x.GetRequiredService<IHttpClientFactory>()));
 
 // RabbitMQ - Consumer
@@ -39,11 +38,14 @@ builder.Services.AddSingleton(x => new Consumer());
 
 builder.Services.AddTransient<AuthDto>();
 builder.Services.AddSingleton<AutomationHub>();
+
 builder.Services.AddTransient<IAuthService, AuthService>();
 builder.Services.AddTransient<IOrderService, OrderService>();
 builder.Services.AddTransient<ISimulationService, SimulationService>();
 builder.Services.AddTransient<IAutomation, Automation>();
+
 builder.Services.AddSingleton(configuration);
+
 builder.Services.AddSignalR();
 
 builder.Services.AddControllers()

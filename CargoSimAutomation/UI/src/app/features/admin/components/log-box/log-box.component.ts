@@ -8,6 +8,7 @@ import { Component, Input, AfterViewChecked, ElementRef, ViewChild } from '@angu
 export class LogBoxComponent implements AfterViewChecked {
   @Input() entity!: string;
   @Input() logs!: any[];
+  @Input() isRunning?: boolean;
 
   @ViewChild('scrollBox') private scrollBoxContainer!: ElementRef;
 

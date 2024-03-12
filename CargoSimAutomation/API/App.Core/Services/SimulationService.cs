@@ -2,6 +2,7 @@
 using App.Core.Hubs;
 using App.Domain.DTOs;
 using App.Domain.Services;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 
@@ -30,6 +31,8 @@ namespace App.Core.Services
 
             if (response)
             {
+                Task.Run(async () => await consumer.StartConsuming());
+
                 var automation = ManageUserAutomation(new AuthDto() { Username = username });
 
                 await automation.Start(token);
@@ -44,6 +47,8 @@ namespace App.Core.Services
 
             if (response)
             {
+                consumer.StopConsuming();
+
                 _ = AutomationDictionary.UserAutomation.Values.Select(x => x.Stop()).ToList();
             }
 
@@ -57,14 +62,13 @@ namespace App.Core.Services
 
             if (userAutomation == default)
             {
-                userAutomation = new Automation(hahnCargoSimClient, authUser, configuration, hub);
+                userAutomation = new Automation(hahnCargoSimClient, authUser, configuration, hub, consumer);
 
                 AutomationDictionary.AddUserAutomation(authUser.Username, userAutomation);
             }
             var teste = AutomationDictionary.UserAutomation.Values;
 
             return userAutomation;
-
         }
     }
 }

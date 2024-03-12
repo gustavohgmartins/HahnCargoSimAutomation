@@ -6,6 +6,7 @@ namespace App.Core.Hubs
     {
         public async Task SendLog(string username, string entity, string log)
         {
+            if (Clients is not null)
             await Clients.All.SendAsync("AutomationLogs", username, entity, log);
         }
     }

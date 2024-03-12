@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { canDeactivateAdminGuard } from './features/admin/can-deactivate-admin.guard';
 
 const routes: Routes = [
   {
@@ -13,7 +14,7 @@ const routes: Routes = [
   },
   {
     path:'admin',
-    loadChildren: () => import('./features/admin/admin.module').then(x => x.AdminModule)
+    loadChildren: () => import('./features/admin/admin.module').then(x => x.AdminModule),
   }
 ];
 

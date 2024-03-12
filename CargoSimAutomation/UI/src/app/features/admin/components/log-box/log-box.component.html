@@ -12,6 +12,6 @@
         </ul>
     </mat-card-content>
     <mat-card-footer>
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        <mat-progress-bar [color]="isRunning ? 'primary' : 'warn'" [value]="isRunning ? 0 : 100" [mode]="isRunning ? 'indeterminate' : 'determinate'"></mat-progress-bar>
     </mat-card-footer>
 </mat-card>

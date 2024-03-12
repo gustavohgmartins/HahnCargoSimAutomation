@@ -1,10 +1,11 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthEndpoint } from 'src/app/domain/auth/auth.endpoint';
 import { SimulationEndpoint } from 'src/app/domain/simulation/simulation.endpoint';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { OrderEndpoint } from 'src/app/domain/order/order.endpoint';
-import {MatDialogModule} from '@angular/material/dialog'
+import { MatDialog, MatDialogModule } from '@angular/material/dialog'
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-admin-page',
@@ -12,21 +13,24 @@ import {MatDialogModule} from '@angular/material/dialog'
   styleUrls: ['./admin-page.component.css']
 })
 export class AdminPageComponent {
-  public username?: string;
+  public _username?: string;
   private _snackBar = inject(MatSnackBar);
-  private connection: HubConnection;
-  public logsData: { [key: string]: any[] } = {};
-  public simData: { [key: string]: any[] } = {};
+  private _connection: HubConnection;
+  public _logsData: { [key: string]: any[] } = {};
+  public _simData: { [key: string]: any[] } = {};
+  public _isRunning?: boolean;
+  public _coins: number = 0;
+  public _transporters: number = 0;
 
   authEndpoint = inject(AuthEndpoint);
   private readonly simulationEndpoint = inject(SimulationEndpoint);
   private readonly orderEndpoint = inject(OrderEndpoint);
   private readonly cdRef = inject(ChangeDetectorRef);
-  private readonly modalService = inject(MatDialogModule);
+  private readonly router = inject(Router);
 
   constructor() {
-    this.connection = new HubConnectionBuilder().withUrl('https://localhost:7051/AutomationHub').build();
-    this.username = this.authEndpoint.authUserSig()?.Username;
+    this._connection = new HubConnectionBuilder().withUrl('https://localhost:7051/AutomationHub').build();
+    this._username = this.authEndpoint.authUserSig()?.Username;
   }
 
   async ngOnInit() {
@@ -34,11 +38,11 @@ export class AdminPageComponent {
   }
 
   startSimulation() {
+    if (this._isRunning) {
+      return;
+    }
+
     this.simulationEndpoint.startSimulation().subscribe((response) => {
-      this.simData = {};
-      this.logsData = {};
-      localStorage.removeItem('simData');
-      localStorage.removeItem('logsData');
       this.openSnackBar("Simulation Started")
     },
       (error) => {
@@ -47,11 +51,18 @@ export class AdminPageComponent {
   }
 
   stopSimulation() {
-    this.simulationEndpoint.stopSimulation().subscribe((response) => {
+    if (!this._isRunning) {
+      return;
+    }
+
+    this.simulationEndpoint.stopSimulation().subscribe(async (response) => {
+      await this._connection.stop();
       this.openSnackBar("Simulation Stopped")
+
     },
       (error) => {
-        this.openSnackBar(error.error.message)
+        let err = error.error?.message
+        this.openSnackBar(err ?? "Unexpected error");
       })
   }
 
@@ -60,7 +71,8 @@ export class AdminPageComponent {
       this.openSnackBar("Orders Generated")
     },
       (error) => {
-        this.openSnackBar(error.error.message)
+        let err = error.error?.message
+        this.openSnackBar(err ?? "Unexpected error");
       })
   }
 
@@ -70,37 +82,59 @@ export class AdminPageComponent {
     });
   }
 
-  logout() {
+  async logout() {
     this.stopSimulation();
-    this.clearStorage()
+    this.clearUserAuth();
   }
 
-  clearStorage(){
+  clearLogs() {
+    this._simData = { ["Simulation"]: ["Waiting..."] }
+    this._logsData = {};
+    this._transporters = 0;
+    this._coins = 0;
+    localStorage.removeItem(this._username + 'transporters');
+    localStorage.removeItem(this._username + 'simData');
+    localStorage.removeItem(this._username + 'logsData');
+    localStorage.removeItem(this._username + 'coins');
+  }
+
+  clearUserAuth() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('simData');
-    localStorage.removeItem('logsData');
   }
 
   async ManageLogs() {
-    this.connection.on('AutomationLogs', (username, entity, log) => {
-      if (username == this.username) {
-        if (entity == "Simulation") {
-          if (!this.simData[entity]) {
-            this.simData[entity] = [log];
-          } else {
-            this.simData[entity].push(log);
-          }
-        } else {
-          if (!this.logsData[entity]) {
-            this.logsData[entity] = [log];
-          } else {
-            this.logsData[entity].push(log);
-          }
+    this._connection.on('AutomationLogs', (username, entity, log) => {
+      if (username == this._username) {
+        switch (entity) {
+          case "isRunning":
+            this._isRunning = Number(log) ? true : false;
+            break;
+          case "transporters":
+            this._transporters = Number(log)
+            break;
+          case "coins":
+            this._coins = Number(log)
+            break;
+          case "Simulation":
+            if (!this._simData[entity]) {
+              this._simData[entity] = [log];
+            } else {
+              this._simData[entity].push(log);
+            }
+            break;
+          default:
+            if (!this._logsData[entity]) {
+              this._logsData[entity] = [log];
+            } else {
+              this._logsData[entity].push(log);
+            }
         }
 
-        localStorage.setItem('simData', JSON.stringify(this.simData));
-        localStorage.setItem('logsData', JSON.stringify(this.logsData));
+        localStorage.setItem(username + 'transporters', JSON.stringify(this._transporters));
+        localStorage.setItem(username + 'coins', JSON.stringify(this._coins));
+        localStorage.setItem(username + 'simData', JSON.stringify(this._simData));
+        localStorage.setItem(username + 'logsData', JSON.stringify(this._logsData));
 
         this.cdRef.markForCheck();
       }
@@ -108,18 +142,31 @@ export class AdminPageComponent {
     });
 
     try {
-      await this.connection.start();
+      await this._connection.start();
       console.log("Connected to AutomationHub")
 
-      const simDataFromStorage = localStorage.getItem('simData');
-      const logsDataFromStorage = localStorage.getItem('logsData');
+      const transporters = localStorage.getItem(this._username + 'transporters');
+      const coins = localStorage.getItem(this._username + 'coins');
+      const simDataFromStorage = localStorage.getItem(this._username + 'simData');
+      const logsDataFromStorage = localStorage.getItem(this._username + 'logsData');
+
+      if (coins) {
+        this._coins = JSON.parse(coins);
+      }
+
+      if (transporters) {
+        this._transporters = JSON.parse(transporters);
+      }
 
       if (simDataFromStorage) {
-        this.simData = JSON.parse(simDataFromStorage);
+        this._simData = JSON.parse(simDataFromStorage);
+      }
+      else {
+        this._simData = { ["Simulation"]: ["Waiting..."] }
       }
 
       if (logsDataFromStorage) {
-        this.logsData = JSON.parse(logsDataFromStorage);
+        this._logsData = JSON.parse(logsDataFromStorage);
       }
     } catch (e) {
       console.log("Failed to connect to automationHub", e);

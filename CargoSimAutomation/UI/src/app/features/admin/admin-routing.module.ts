@@ -1,11 +1,13 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AdminPageComponent } from './pages/admin-page/admin-page.component';
+import { canDeactivateAdminGuard } from './can-deactivate-admin.guard';
 
 const routes: Routes = [
   {
     path:'',
-    component:AdminPageComponent
+    component:AdminPageComponent,
+    canDeactivate: [canDeactivateAdminGuard]
   }
 ];
 

@@ -1,5 +1,7 @@
 ﻿using System.Text;
 using System.Threading.Channels;
+using App.Domain.Models;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -10,8 +12,10 @@ public class Consumer
     private IModel _channel;
     private EventingBasicConsumer _consumer;
 
+    public List<Order> _availableOrders = new List<Order>();
+    public List<Order> _consumedOrders = new List<Order>();
+
     private bool _isConsuming;
-    private bool _stopRequested;
     private string _consumerTag;
 
     private readonly string _queueName = "HahnCargoSim_NewOrders";
@@ -35,17 +39,26 @@ public class Consumer
         _consumer = new EventingBasicConsumer(_channel);
         _consumer.Received += (model, eventArgs) =>
         {
-            var body = eventArgs.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
-            Console.WriteLine($"Received message: {message}");
+            try
+            {
+                var body = eventArgs.Body.ToArray();
+                var orderJson = Encoding.UTF8.GetString(body);
+                var orderObject = JsonConvert.DeserializeObject<Order>(orderJson);
+                
+                Console.WriteLine($"{orderJson}");
+                _consumedOrders.Add(orderObject);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         };
     }
 
     public async Task StartConsuming()
     {
-        if (_isConsuming || _stopRequested)
+        if (_isConsuming)
         {
-            _stopRequested = false;
             return;
         }
 
@@ -59,7 +72,7 @@ public class Consumer
         {
             Console.WriteLine($"The queue'{_queueName}' does not exist. Unable to start consuming");
             _connection.Dispose();
-            Task.Delay(3000).Wait();
+            Task.Delay(1000).Wait();
             CreateConsumer();
             await StartConsuming();
         }
@@ -67,9 +80,13 @@ public class Consumer
 
     public void StopConsuming()
     {
+        if (!_isConsuming)
+        {
+            return;
+        }
+
         _connection.Dispose();
         _isConsuming = false;
-        _stopRequested = true;
         Console.WriteLine("Consumer stopped");
     }
 

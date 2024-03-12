@@ -10,7 +10,7 @@ import { LogBoxComponent } from './components/log-box/log-box.component';
 @NgModule({
   declarations: [
     AdminPageComponent,
-    LogBoxComponent
+    LogBoxComponent,
   ],
   imports: [
     SharedModule,
