@@ -62,8 +62,8 @@ namespace App.Core.Services
         public async Task Stop()
         {
             _isRunning = false;
-
             await hub.SendLog(authUser.Username, "isRunning", "0");
+            await hub.SendLog(authUser.Username, "Simulation", "Simulation stopped");
         }
 
         private async Task ExecuteAsync()
@@ -103,8 +103,6 @@ namespace App.Core.Services
 
                     await Task.Delay(1000);
                 }
-
-                await hub.SendLog(authUser.Username, "Simulation", "Simulation stopped");
             }
             catch (Exception e)
             {
@@ -364,6 +362,10 @@ namespace App.Core.Services
             }
         }
 
+
+        /// <summary>
+        ///  Removes from _transporterAcceptedOrder the orders that were already picked up.
+        /// </summary>
         private void ManageTransportersAcceptedOrders()
         {
             List<int> transporterAcceptedOrdersToRemove = new List<int>();
@@ -405,7 +407,7 @@ namespace App.Core.Services
                 consumer._availableOrders = consumer._consumedOrders.ToList();
                 consumer._availableOrders.RemoveAll(o => _ordersToRemove.Contains(o.Id));
 
-                // Filters the consumed orders that are not expired, and on the grid
+                // Filters the consumed orders that are not expired and on the grid
                 consumer._availableOrders.RemoveAll(o => DateTime.ParseExact(o.ExpirationDateUtc, "MM/dd/yyyy HH:mm:ss", null) <= DateTime.UtcNow
                                                         || !_grid.Nodes.Any(n => n.Id == o.TargetNodeId)
                                                         || !_grid.Nodes.Any(n => n.Id == o.OriginNodeId));
@@ -427,6 +429,13 @@ namespace App.Core.Services
             }
         }
 
+        /// <summary>
+        /// Calculates coins per minute using time, cost, and payment attributed to an order.
+        /// </summary>
+        /// <param name="time"></param>
+        /// <param name="cost"></param>
+        /// <param name="payment"></param>
+        /// <returns></returns>
         private double BestRouteIndex(TimeSpan time, int cost, int payment)
         {
             return (payment - cost) / time.TotalMinutes;

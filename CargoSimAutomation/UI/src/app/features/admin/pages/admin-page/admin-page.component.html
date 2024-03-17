@@ -1,4 +1,7 @@
-<body>
+<div class="loading" *ngIf="_isRunning == undefined">
+    <mat-spinner></mat-spinner>
+</div>
+<body >
     <div class="header-container">
         <h1>Hahn Cargo Simulation</h1>
         <button mat-icon-button aria-label="Logout" routerLink="/login">

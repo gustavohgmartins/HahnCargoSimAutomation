@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Threading.Channels;
 using App.Domain.Models;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -18,11 +19,13 @@ public class Consumer
     private bool _isConsuming;
     private string _consumerTag;
 
-    private readonly string _queueName = "HahnCargoSim_NewOrders";
-    private readonly string _HostName = "localhost";
+    private readonly string _queueName;
+    private readonly string _HostName;
 
-    public Consumer()
+    public Consumer(IConfiguration configuration)
     {
+        _queueName = configuration.GetSection("RabbitMQ:QueueName").Value;
+        _HostName = configuration.GetSection("RabbitMQ:HostName").Value;
         CreateConsumer();
     }
 
@@ -33,7 +36,19 @@ public class Consumer
             HostName = _HostName
         };
 
-        _connection = factory.CreateConnection();
+        try
+        {
+            _connection = factory.CreateConnection();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error | Consumer | Unable to create connection | {e.Message}");
+
+            Task.Delay(3000).Wait();
+
+            CreateConsumer();
+        }
+
         _channel = _connection.CreateModel();
 
         _consumer = new EventingBasicConsumer(_channel);
@@ -44,8 +59,7 @@ public class Consumer
                 var body = eventArgs.Body.ToArray();
                 var orderJson = Encoding.UTF8.GetString(body);
                 var orderObject = JsonConvert.DeserializeObject<Order>(orderJson);
-                
-                Console.WriteLine($"{orderJson}");
+
                 _consumedOrders.Add(orderObject);
             }
             catch (Exception ex)
@@ -70,7 +84,7 @@ public class Consumer
         }
         catch (OperationInterruptedException)
         {
-            Console.WriteLine($"The queue'{_queueName}' does not exist. Unable to start consuming");
+            Console.WriteLine($"Error | Consumer | The queue'{_queueName}' does not exist. Unable to start consuming");
             _connection.Dispose();
             Task.Delay(1000).Wait();
             CreateConsumer();

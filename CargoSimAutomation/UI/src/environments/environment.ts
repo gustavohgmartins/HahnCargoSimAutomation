@@ -5,9 +5,13 @@ import { Injectable } from '@angular/core';
   })
 
 export class Environment{
-    private baseUrl = "https://localhost:7051";
+    private baseUrl = "http://localhost:5000";
 
     get apiEndpoint(): string{
         return this.baseUrl;
+    }
+
+    get hubEndpoint(): string{
+        return this.baseUrl + "/AutomationHub";
     }
 }

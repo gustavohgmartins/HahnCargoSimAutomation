@@ -1,5 +1,7 @@
 /CargoSimAutomation/UI/.angular
 /CargoSimAutomation/UI/node_modules
+/CargoSimAutomation/UI/.vscode
+/CargoSimAutomation/UI/dist
 
 /CargoSimAutomation/API/.vs
 
@@ -11,4 +13,5 @@
 
 /CargoSimAutomation/API/App.Domain/bin
 /CargoSimAutomation/API/App.Domain/obj
-/HahnCargoSim/*
+
+/HahnCargoSim/

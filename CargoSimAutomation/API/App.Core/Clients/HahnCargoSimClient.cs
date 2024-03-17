@@ -12,11 +12,14 @@ namespace App.Core.Clients
 {
     public class HahnCargoSimClient
     {
-        public readonly HttpClient httpClient;
-        private readonly string _baseAddress = "https://localhost:7115";
-        public HahnCargoSimClient(IHttpClientFactory factory)
+        public readonly HttpClient _httpClient;
+        private readonly string _baseAddress;
+        private readonly IConfiguration _configuration;
+        public HahnCargoSimClient(IHttpClientFactory factory, IConfiguration configuration)
         {
-            this.httpClient = factory.CreateClient();
+            _configuration = configuration;
+            _httpClient = factory.CreateClient("DockerBypassSsl");
+            _baseAddress = _configuration.GetSection("Clients:HahnCargoSimEndpoint").Value;
         }
 
         public async Task<AuthDto> Login(AuthDto auth)
@@ -25,7 +28,7 @@ namespace App.Core.Clients
 
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            var responseMsg = await httpClient.PostAsync($"{_baseAddress}/user/login", content);
+            var responseMsg = await _httpClient.PostAsync($"{_baseAddress}/user/login", content);
 
 
             if (!responseMsg.IsSuccessStatusCode)
@@ -45,10 +48,7 @@ namespace App.Core.Clients
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/user/CoinAmount");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var response = await httpClient.SendAsync(requestMessage);
-
-            //var response = await httpClient.GetAsync($"/user/CoinAmount");
-
+            var response = await _httpClient.SendAsync(requestMessage);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -60,12 +60,10 @@ namespace App.Core.Clients
 
         public async Task<bool> StartSimulation(string token)
         {
-            //var response = await httpClient.PostAsync($"/sim/start", null);
-
             var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/sim/start");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var response = await httpClient.SendAsync(requestMessage);
+            var response = await _httpClient.SendAsync(requestMessage);
 
 
             if (!response.IsSuccessStatusCode)
@@ -78,12 +76,10 @@ namespace App.Core.Clients
 
         public async Task<bool> StopSimulation(string token)
         {
-            //var response = await httpClient.PostAsync($"/sim/stop", null);
-
             var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/sim/stop");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var response = await httpClient.SendAsync(requestMessage);
+            var response = await _httpClient.SendAsync(requestMessage);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -97,9 +93,7 @@ namespace App.Core.Clients
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/user/CoinAmount");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var responseMsg = await httpClient.SendAsync(requestMessage);
-
-            //var responseMsg = await httpClient.GetAsync($"/user/CoinAmount");
+            var responseMsg = await _httpClient.SendAsync(requestMessage);
 
             if (!responseMsg.IsSuccessStatusCode)
             {
@@ -118,7 +112,7 @@ namespace App.Core.Clients
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/order/GetAllAvailable");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var responseMsg = await httpClient.SendAsync(requestMessage);
+            var responseMsg = await _httpClient.SendAsync(requestMessage);
 
             if (!responseMsg.IsSuccessStatusCode)
             {
@@ -137,7 +131,7 @@ namespace App.Core.Clients
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/order/GetAllAccepted");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var responseMsg = await httpClient.SendAsync(requestMessage);
+            var responseMsg = await _httpClient.SendAsync(requestMessage);
 
             if (!responseMsg.IsSuccessStatusCode)
             {
@@ -157,7 +151,7 @@ namespace App.Core.Clients
 
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var response = await httpClient.SendAsync(requestMessage);
+            var response = await _httpClient.SendAsync(requestMessage);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -173,7 +167,7 @@ namespace App.Core.Clients
 
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var response = await httpClient.SendAsync(requestMessage);
+            var response = await _httpClient.SendAsync(requestMessage);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -188,7 +182,7 @@ namespace App.Core.Clients
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{_baseAddress}/grid/Get");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var responseMsg = await httpClient.SendAsync(requestMessage);
+            var responseMsg = await _httpClient.SendAsync(requestMessage);
 
             if (!responseMsg.IsSuccessStatusCode)
             {
@@ -207,7 +201,7 @@ namespace App.Core.Clients
             var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_baseAddress}/CargoTransporter/Buy?positionNodeId={positionNodeId}");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var responseMsg = await httpClient.SendAsync(requestMessage);
+            var responseMsg = await _httpClient.SendAsync(requestMessage);
 
             if (!responseMsg.IsSuccessStatusCode)
             {
@@ -227,7 +221,7 @@ namespace App.Core.Clients
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
             requestMessage.Properties.Add("transporterId", transporterId);
 
-            var responseMsg = await httpClient.SendAsync(requestMessage);
+            var responseMsg = await _httpClient.SendAsync(requestMessage);
 
             if (!responseMsg.IsSuccessStatusCode)
             {
@@ -246,7 +240,7 @@ namespace App.Core.Clients
             var requestMessage = new HttpRequestMessage(HttpMethod.Put, $"{_baseAddress}/CargoTransporter/Move?transporterId={transporterId}&targetNodeId={targetNodeId}");
             requestMessage.Headers.Add("Authorization", $"Bearer {token}");
 
-            var response = await httpClient.SendAsync(requestMessage);
+            var response = await _httpClient.SendAsync(requestMessage);
 
             if (!response.IsSuccessStatusCode)
             {

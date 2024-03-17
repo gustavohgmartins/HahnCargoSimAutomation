@@ -1,19 +1,26 @@
 version: '3.8'
 
 services:
-    app-api:
-        build:
-            context: ./CargoSimAutomation/API
-            dockerfile: Dockerfile
-        container_name: app-api
-        ports:
-        - "8080:8080"
-    app-ui:
-      image: nginx:alpine
-      container_name: app-ui
-      ports:
-        - "80:80"
-      volumes:
-        - ./CargoSimAutomation/UI/dist/cargo-sim-automation:/usr/share/nginx/html
-      depends_on:
-        - app-api
+  api:
+    build:
+      context: ./CargoSimAutomation/API
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+    networks:
+      - mynetwork 
+  ui:
+    container_name: ui-container
+    build:
+      context: ./CargoSimAutomation/UI
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - mynetwork
+networks:
+  mynetwork:
