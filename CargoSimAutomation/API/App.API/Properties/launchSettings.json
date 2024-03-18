@@ -2,8 +2,6 @@
   "profiles": {
     "CargoSimAutomation": {
       "commandName": "Project",
-      "launchUrl": "Auth/Test",
-      "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

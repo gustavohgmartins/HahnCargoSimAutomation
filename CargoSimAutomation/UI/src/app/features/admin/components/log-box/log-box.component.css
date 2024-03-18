@@ -1,38 +1,43 @@
-/* Estilos da barra de rolagem */
 mat-card-content::-webkit-scrollbar {
     width: 10px;
   }
   
-  mat-card-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-  
-  mat-card-content::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 5px;
-  }
-  
-  mat-card-content::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
+mat-card-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
 
-  mat-card-content{
-    height: 100%;
-    overflow-y: auto;
-    padding: 10px 12px;
-  }
+mat-card-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
 
-  mat-card {
-    height: 100%;
-  }
-  
-  .icon-log {
-    display: flex;
-    align-items: center;
-    padding-left: 14px;
-    margin: 16px 0px;
-  }
-  
+mat-card-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+mat-card-content{
+  height: 100%;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+mat-card {
+  height: 100%;
+}
+
+.icon-log {
+  display: flex;
+  align-items: center;
+  padding-left: 14px;
+  margin: 16px 0px;
+}
+
 .list-log {
-    margin: 16px 0px;
+  margin: 16px 0px;
+}
+
+@media (max-width: 750px) {
+  mat-card-content{
+    font-size: 3vw;
   }
+}

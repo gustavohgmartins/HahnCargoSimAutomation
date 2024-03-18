@@ -41,7 +41,7 @@
                 <h2>Coins: <span [ngStyle]="{'color': _coins < 1000 ? 'orange' : 'green'}">{{_coins}}</span></h2>
                 <h2>Transporters: {{_transporters}}</h2>
             </div>
-            <div class="right-container" *ngFor="let entry of _simData | keyvalue">
+            <div class="sim-container" *ngFor="let entry of _simData | keyvalue">
                 <app-log-box [entity]="entry.key" [logs]="entry.value" [isRunning]="_isRunning"></app-log-box>
             </div>
         </div>
