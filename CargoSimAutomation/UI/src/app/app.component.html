@@ -1,4 +1,7 @@
-<router-outlet *ngIf="!authenticating"></router-outlet>
-<div *ngIf="authenticating">
+<div class="content">
+    <router-outlet></router-outlet>
+</div>
+<div class="overlay" *ngIf="authenticating">
     <mat-spinner></mat-spinner>
+    <span>Loading...</span>
 </div>
