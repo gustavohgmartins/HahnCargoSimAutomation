@@ -4,8 +4,6 @@ import { AuthEndpoint } from 'src/app/domain/auth/auth.endpoint';
 import { SimulationEndpoint } from 'src/app/domain/simulation/simulation.endpoint';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { OrderEndpoint } from 'src/app/domain/order/order.endpoint';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog'
-import { Router } from '@angular/router';
 import { Environment } from 'src/environments/environment';
 
 @Component({
@@ -32,10 +30,6 @@ export class AdminPageComponent {
   constructor() {
     this._connection = new HubConnectionBuilder().withUrl(this.environment.hubEndpoint).build();
     this._username = this.authEndpoint.authUserSig()?.Username;
-  }
-
-  @HostListener('window:beforeunload', ['$event'])
-  public beforeunloadHandler(event: any) {
   }
 
   async ngOnInit() {
@@ -66,7 +60,6 @@ export class AdminPageComponent {
 
     this.simulationEndpoint.stopSimulation().subscribe(async (response) => {
       this.openSnackBar("Simulation Stopped")
-
     },
       (error) => {
         let err = error.error?.message
@@ -100,6 +93,7 @@ export class AdminPageComponent {
     this._logsData = {};
     this._transporters = 0;
     this._coins = 0;
+    localStorage.removeItem(this._username + 'isRunning');
     localStorage.removeItem(this._username + 'transporters');
     localStorage.removeItem(this._username + 'simData');
     localStorage.removeItem(this._username + 'logsData');
@@ -107,6 +101,7 @@ export class AdminPageComponent {
   }
 
   clearUserAuth() {
+    localStorage.removeItem(this._username + 'isRunning');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   }
@@ -185,7 +180,7 @@ export class AdminPageComponent {
       console.log("Failed to connect to automationHub", e);
     }
 
-    if(!this._isRunning){
+    if (!this._isRunning) {
       this._isRunning = false;
     }
   }
