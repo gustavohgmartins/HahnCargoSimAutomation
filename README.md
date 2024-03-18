@@ -12,9 +12,9 @@ Docker Compose was employed to orchestrate the deployment of a .NET 8 backend an
 
 The maximum number of transporters can be configured within the appsettings.json file (it depends on how long the application will be running for)
 
-  Default value: 5
+  - Default value: 5
 
-  Set it to 0 to be unlimited (as soon as possible, according to the implemented rule, a new transporter will be bought)
+  - Set it to 0 to be unlimited (as soon as possible, according to the implemented rule, a new transporter will be bought)
 
 ## Getting started
 
@@ -22,11 +22,11 @@ Make sure to have RabbitMQ and Docker installed.
 
 1- Start RabbitMQ, and log in.
 
-  Default port: http://localhost:15672
+  - Default port: http://localhost:15672
 
-  Default user: guest
+  - Default user: guest
 
-  Default password: guest
+  - Default password: guest
 
 2- Start Docker Engine
 
