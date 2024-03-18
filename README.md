@@ -32,9 +32,9 @@ Make sure to have RabbitMQ and Docker installed.
 
 3- Start HahnCargoSim project
 
-4- At the docker-compose.yml directory run the following command:
+4- In the docker-compose.yml directory run the following command:
 docker-compose up
 
-5- Access the application at http://localhost:80
+5- Access the application on http://localhost:80
 
 
