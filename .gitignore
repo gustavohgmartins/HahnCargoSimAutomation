@@ -1,17 +1,17 @@
-/CargoSimAutomation/UI/.angular
-/CargoSimAutomation/UI/node_modules
-/CargoSimAutomation/UI/.vscode
-/CargoSimAutomation/UI/dist
+CargoSimAutomation/UI/.angular
+CargoSimAutomation/UI/node_modules
+CargoSimAutomation/UI/.vscode
+CargoSimAutomation/UI/dist
 
-/CargoSimAutomation/API/.vs
+CargoSimAutomation/API/.vs
 
-/CargoSimAutomation/API/App.API/bin
-/CargoSimAutomation/API/App.API/obj
+CargoSimAutomation/API/App.API/bin
+CargoSimAutomation/API/App.API/obj
 
-/CargoSimAutomation/API/App.Core/bin
-/CargoSimAutomation/API/App.Core/obj
+CargoSimAutomation/API/App.Core/bin
+CargoSimAutomation/API/App.Core/obj
 
-/CargoSimAutomation/API/App.Domain/bin
-/CargoSimAutomation/API/App.Domain/obj
+CargoSimAutomation/API/App.Domain/bin
+CargoSimAutomation/API/App.Domain/obj
 
-/HahnCargoSim/
+HahnCargoSim/
